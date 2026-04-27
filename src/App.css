@@ -194,33 +194,69 @@
 .app-shell {
   text-align: left;
   background: var(--panel-bg);
-  backdrop-filter: blur(1px);
-  border-radius: 1rem;
+  backdrop-filter: blur(2px);
+  border-radius: 0.5rem;
   box-shadow: var(--shadow);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 0.35rem 1rem 1rem;
+  border: 1px solid rgba(0, 200, 180, 0.18);
+  padding: 0;
+  overflow: clip;
 }
 
 .page-header {
   display: flex;
   align-items: center;
-  gap: 0.9rem;
-  margin-bottom: 1.25rem;
+  gap: 1rem;
+  margin-bottom: 0;
+  background: rgba(6, 10, 14, 0.92);
+  border-bottom: 1px solid var(--accent);
+  padding: 0.6rem 1rem;
+}
+
+.header-logo-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
 .header-logo {
-  display: inline-block;
-  width: clamp(120px, 22vw, 176px);
+  display: block;
+  width: clamp(100px, 18vw, 148px);
   height: auto;
   margin: 0;
+}
+
+.header-tagline {
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  line-height: 1;
 }
 
 .page-title {
   margin: 0 0 0 auto;
   text-align: right;
-  font-size: clamp(1.5rem, 3.6vw, 2.25rem);
+  font-size: clamp(1.1rem, 3vw, 1.6rem);
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  font-weight: 400;
+}
+
+.search-body {
+  padding: 1rem;
+}
+
+.search-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(6, 10, 14, 0.88);
+  backdrop-filter: blur(6px);
+  padding: 1rem;
+  margin: -1rem -1rem 0;
+  border-bottom: 1px solid rgba(0, 200, 180, 0.15);
 }
 
 .search-controls {
@@ -277,21 +313,29 @@
 
 @media (max-width: 768px) {
   .app-shell {
-    padding: 0.2rem 0.75rem 0.85rem;
-    border-radius: 0.75rem;
+    border-radius: 0.4rem;
   }
 
   .page-header {
     gap: 0.65rem;
-    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
   }
 
   .header-logo {
-    width: clamp(112px, 28vw, 144px);
+    width: clamp(80px, 20vw, 112px);
   }
 
   .page-title {
-    font-size: clamp(1.2rem, 6vw, 1.55rem);
+    font-size: clamp(0.9rem, 5vw, 1.2rem);
+  }
+
+  .search-body {
+    padding: 0.75rem;
+  }
+
+  .search-sticky {
+    padding: 0.75rem;
+    margin: -0.75rem -0.75rem 0;
   }
 
   .search-controls {
@@ -333,11 +377,11 @@
 }
 
 .result-row:nth-child(odd) {
-  background: color-mix(in srgb, var(--code-bg) 65%, var(--bg));
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .result-row:nth-child(even) {
-  background: var(--bg);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .result-row + .result-row {

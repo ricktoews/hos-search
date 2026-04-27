@@ -72,15 +72,20 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="page-header">
-        <img
-          className="header-logo"
-          src="https://v4.hos.com/assets/images/hos-logo-white.svg"
-          alt="Hearts of Space logo"
-        />
+        <div className="header-logo-wrap">
+          <img
+            className="header-logo"
+            src="https://v4.hos.com/assets/images/hos-logo-white.svg"
+            alt="Hearts of Space logo"
+          />
+          <span className="header-tagline">SLOW MUSIC FOR FAST TIMES</span>
+        </div>
         <h1 className="page-title">Archive Search</h1>
       </header>
 
-      <div className="search-controls">
+      <div className="search-body">
+        <div className="search-sticky">
+        <div className="search-controls">
         <textarea
           rows={2}
           placeholder="Describe a mood..."
@@ -109,6 +114,7 @@ export default function App() {
           </svg>
         </button>
       </div>
+        </div>{/* end search-sticky */}
 
       <div className="search-results">
         {isLoading && (
@@ -191,6 +197,7 @@ export default function App() {
             })}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
