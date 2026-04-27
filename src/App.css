@@ -210,7 +210,7 @@
 
 .header-logo {
   display: inline-block;
-  width: clamp(60px, 11vw, 88px);
+  width: clamp(120px, 22vw, 176px);
   height: auto;
   margin: 0;
 }
@@ -287,7 +287,7 @@
   }
 
   .header-logo {
-    width: clamp(56px, 14vw, 72px);
+    width: clamp(112px, 28vw, 144px);
   }
 
   .page-title {
@@ -356,6 +356,32 @@
   background: transparent;
   color: inherit;
   cursor: pointer;
+}
+
+.play-button {
+  flex-shrink: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--code-bg);
+  color: var(--accent);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-button svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-left: 0.1rem;
+}
+
+.play-button:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
 }
 
 .result-title {

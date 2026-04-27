@@ -134,6 +134,23 @@ export default function App() {
                     onClick={() => toggleExpanded(r.program_number)}
                     aria-expanded={isExpanded}
                   >
+                    <button
+                      type="button"
+                      className="play-button"
+                      aria-label={`Play ${r.title}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(
+                          `https://www.hos.com/programs/details/${r.program_number}?utm_campaign=shareaholic&utm_medium=copy_link&utm_source=bookmark`,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <polygon points="5,3 19,12 5,21" />
+                      </svg>
+                    </button>
                     <div>
                       <strong className="result-title">
                         #{r.program_number} - {r.title}
