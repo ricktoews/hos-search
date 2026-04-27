@@ -3,6 +3,12 @@ import "./App.css";
 
 const SEARCH_STATE_KEY = "hosSearchState";
 
+const formatDuration = (seconds) => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+};
+
 export default function App() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -138,15 +144,29 @@ export default function App() {
                   </button>
 
                   {isExpanded && (
-                    <div className="result-details">
-                      <div>
-                        <span className="result-label">Similarity score</span>
-                        <span>{r.score.toFixed(4)}</span>
-                      </div>
-                      <div>
-                        <span className="result-label">Weather report</span>
-                        <span>{r.weather_report}</span>
-                      </div>
+                    <div className="result-tracks">
+                      <table className="tracks-table">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Track</th>
+                            <th>Artist</th>
+                            <th>Album</th>
+                            <th>Duration</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(r.tracks ?? []).map((t, i) => (
+                            <tr key={i}>
+                              <td>{i + 1}</td>
+                              <td>{t.track}</td>
+                              <td>{t.artist}</td>
+                              <td>{t.album}</td>
+                              <td>{formatDuration(t.duration)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </article>
