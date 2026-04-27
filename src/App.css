@@ -470,6 +470,7 @@
 .tracks-table td {
   padding: 0.4rem 0.6rem;
   vertical-align: top;
+  text-align: left;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
 }
 
@@ -484,12 +485,6 @@
   text-align: right;
 }
 
-.tracks-table td:last-child,
-.tracks-table th:last-child {
-  text-align: right;
-  white-space: nowrap;
-  width: 4rem;
-}
 
 .is-expanded {
   background: color-mix(in srgb, var(--accent-bg) 35%, var(--bg));

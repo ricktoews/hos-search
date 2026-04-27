@@ -173,9 +173,6 @@ export default function App() {
                           <tr>
                             <th>#</th>
                             <th>Track</th>
-                            <th>Artist</th>
-                            <th>Album</th>
-                            <th>Duration</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -183,9 +180,6 @@ export default function App() {
                             <tr key={i}>
                               <td>{i + 1}</td>
                               <td>{t.track}</td>
-                              <td>{t.artist}</td>
-                              <td>{t.album}</td>
-                              <td>{formatDuration(t.duration)}</td>
                             </tr>
                           ))}
                         </tbody>
