@@ -10,10 +10,12 @@ export default function App() {
   const [album, setAlbum] = useState("");
   const [description, setDescription] = useState("");
   const [results, setResults] = useState([]);
+  const [noResultsMessage, setNoResultsMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(true);
   const [expandedProgram, setExpandedProgram] = useState(null);
   const [expandedTrackKey, setExpandedTrackKey] = useState(null);
+  const showSearchToggle = results.length > 0 || Boolean(noResultsMessage);
 
   useEffect(() => {
     const savedState = sessionStorage.getItem(SEARCH_STATE_KEY);
@@ -82,6 +84,7 @@ export default function App() {
     }
 
     setIsLoading(true);
+    setNoResultsMessage("");
     setExpandedProgram(null);
     setExpandedTrackKey(null);
 
@@ -96,7 +99,8 @@ export default function App() {
 
       const data = await res.json();
       setResults(data);
-      setIsSearchPanelOpen(false);
+      setIsSearchPanelOpen(data.length === 0);
+      setNoResultsMessage(data.length === 0 ? "No matching results found." : "");
       sessionStorage.setItem(
         SEARCH_STATE_KEY,
         JSON.stringify({
@@ -132,6 +136,7 @@ export default function App() {
     setArtist("");
     setAlbum("");
     setDescription("");
+    setNoResultsMessage("");
 
     sessionStorage.setItem(
       SEARCH_STATE_KEY,
@@ -149,220 +154,233 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="page-header">
-        <div className="header-logo-wrap">
-          <img
-            className="header-logo"
-            src="https://v4.hos.com/assets/images/hos-logo-white.svg"
-            alt="Hearts of Space logo"
-          />
-          <span className="header-tagline">SLOW MUSIC FOR FAST TIMES</span>
-        </div>
-        <h1 className="page-title">Archive Search</h1>
-      </header>
+      <div
+        className={[
+          "top-chrome",
+          showSearchToggle ? "has-toggle" : "",
+          isSearchPanelOpen ? "is-search-open" : "is-search-closed",
+        ].filter(Boolean).join(" ")}
+      >
+        <header className="page-header">
+          <div className="header-logo-wrap">
+            <img
+              className="header-logo"
+              src="https://v4.hos.com/assets/images/hos-logo-white.svg"
+              alt="Hearts of Space logo"
+            />
+            <span className="header-tagline">SLOW MUSIC FOR FAST TIMES</span>
+          </div>
+          <h1 className="page-title">Archive Search</h1>
+        </header>
 
-      {results.length > 0 && (
-        <div className="search-toggle-bar">
-          <button
-            type="button"
-            onClick={() => setIsSearchPanelOpen((v) => !v)}
-            className="search-toggle-button"
-          >
-            <svg className="toggle-btn-bg" viewBox="0 0 140 34" preserveAspectRatio="none" aria-hidden="true">
-              <polygon points="0,0 140,0 112,34 28,34" fill="none" stroke="rgba(0,200,180,0.45)" strokeWidth="4" vectorEffect="non-scaling-stroke" />
-              <polygon points="0,0 140,0 112,34 28,34" fill="rgba(6,10,14,0.96)" />
-            </svg>
-            <span className="toggle-btn-label">{isSearchPanelOpen ? "Close" : "Search"}</span>
-          </button>
-        </div>
-      )}
+        {showSearchToggle && (
+          <div className="search-toggle-bar">
+            <button
+              type="button"
+              onClick={() => setIsSearchPanelOpen((value) => !value)}
+              className="search-toggle-button"
+            >
+              {isSearchPanelOpen ? "Close" : "Search"}
+            </button>
+          </div>
+        )}
 
-      <div className="search-body">
-        <div className="search-sticky">
+        <div className="search-body search-body-top">
+          <div className="search-sticky">
+            <div
+              id="search-fields-panel"
+              className={[
+                "search-panel",
+                isSearchPanelOpen ? "is-open" : "",
+              ].filter(Boolean).join(" ")}
+            >
+              <div className="search-fields">
+                <input
+                  type="text"
+                  placeholder="Program Name"
+                  value={programName}
+                  onChange={(e) => setProgramName(e.target.value)}
+                  className="search-text-input"
+                />
 
-          <div
-            id="search-fields-panel"
-            className={[
-              "search-panel",
-              isSearchPanelOpen ? "is-open" : "",
-            ].filter(Boolean).join(" ")}
-          >
-            <div className="search-fields">
-              <input
-                type="text"
-                placeholder="Program Name"
-                value={programName}
-                onChange={(e) => setProgramName(e.target.value)}
-                className="search-text-input"
-              />
+                <input
+                  type="text"
+                  placeholder="Track title"
+                  value={trackTitle}
+                  onChange={(e) => setTrackTitle(e.target.value)}
+                  className="search-text-input"
+                />
 
-              <input
-                type="text"
-                placeholder="Track title"
-                value={trackTitle}
-                onChange={(e) => setTrackTitle(e.target.value)}
-                className="search-text-input"
-              />
+                <input
+                  type="text"
+                  placeholder="Artist"
+                  value={artist}
+                  onChange={(e) => setArtist(e.target.value)}
+                  className="search-text-input"
+                />
 
-              <input
-                type="text"
-                placeholder="Artist"
-                value={artist}
-                onChange={(e) => setArtist(e.target.value)}
-                className="search-text-input"
-              />
+                <input
+                  type="text"
+                  placeholder="Album"
+                  value={album}
+                  onChange={(e) => setAlbum(e.target.value)}
+                  className="search-text-input"
+                />
 
-              <input
-                type="text"
-                placeholder="Album"
-                value={album}
-                onChange={(e) => setAlbum(e.target.value)}
-                className="search-text-input"
-              />
+                <textarea
+                  rows={2}
+                  placeholder="Description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="search-input"
+                />
 
-              <textarea
-                rows={2}
-                placeholder="Description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="search-input"
-              />
+                <div className="search-panel-actions">
+                  <button
+                    type="button"
+                    onClick={handleResetFields}
+                    disabled={isLoading}
+                    className="search-reset-button"
+                  >
+                    Reset
+                  </button>
 
-              <div className="search-panel-actions">
-                <button
-                  type="button"
-                  onClick={handleResetFields}
-                  disabled={isLoading}
-                  className="search-reset-button"
-                >
-                  Reset
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSearch}
-                  disabled={isLoading}
-                  className="search-submit-button"
-                >
-                  {isLoading ? "Searching..." : "Search Archive"}
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleSearch}
+                    disabled={isLoading}
+                    className="search-submit-button"
+                  >
+                    {isLoading ? "Searching..." : "Search Archive"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>{/* end search-sticky */}
+        </div>
+      </div>
 
-      <div className="search-results">
-        {isLoading && (
-          <div className="search-loading" role="status" aria-live="polite">
-            <span className="search-spinner" aria-hidden="true" />
-            <span>Searching the archive...</span>
-          </div>
-        )}
+      <div className="search-body search-results-shell">
+        <div className="search-results">
+          {isLoading && (
+            <div className="search-loading" role="status" aria-live="polite">
+              <span className="search-spinner" aria-hidden="true" />
+              <span>Searching the archive...</span>
+            </div>
+          )}
 
-        {results.length > 0 && (
-          <div className="results-list">
-            {results.map((r) => {
-              const isExpanded = expandedProgram === r.program_number;
+          {!isLoading && noResultsMessage && (
+            <div className="search-empty-state" role="status" aria-live="polite">
+              {noResultsMessage}
+            </div>
+          )}
 
-              return (
-                <article
-                  key={r.program_number}
-                  className={`result-row${isExpanded ? " is-expanded" : ""}`}
-                >
-                  <button
-                    type="button"
-                    className="result-summary"
-                    onClick={() => toggleExpanded(r.program_number)}
-                    aria-expanded={isExpanded}
+          {results.length > 0 && (
+            <div className="results-list">
+              {results.map((r) => {
+                const isExpanded = expandedProgram === r.program_number;
+
+                return (
+                  <article
+                    key={r.program_number}
+                    className={`result-row${isExpanded ? " is-expanded" : ""}`}
                   >
                     <button
                       type="button"
-                      className="play-button"
-                      aria-label={`Play ${r.title}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(
-                          `https://www.hos.com/programs/details/${r.program_number}?utm_campaign=shareaholic&utm_medium=copy_link&utm_source=bookmark`,
-                          "_blank",
-                          "noopener,noreferrer",
-                        );
-                      }}
+                      className="result-summary"
+                      onClick={() => toggleExpanded(r.program_number)}
+                      aria-expanded={isExpanded}
                     >
-                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <polygon points="5,3 19,12 5,21" />
-                      </svg>
+                      <button
+                        type="button"
+                        className="play-button"
+                        aria-label={`Play ${r.title}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(
+                            `https://www.hos.com/programs/details/${r.program_number}?utm_campaign=shareaholic&utm_medium=copy_link&utm_source=bookmark`,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <polygon points="5,3 19,12 5,21" />
+                        </svg>
+                      </button>
+                      <div className="result-content">
+                        <strong className="result-title">
+                          #{r.program_number} - {r.title}
+                        </strong>
+                        <div className="result-description">{r.short_description}</div>
+                      </div>
+                      <span className="result-toggle">{isExpanded ? "Hide" : "Show"}</span>
                     </button>
-                    <div className="result-content">
-                      <strong className="result-title">
-                        #{r.program_number} - {r.title}
-                      </strong>
-                      <div className="result-description">{r.short_description}</div>
-                    </div>
-                    <span className="result-toggle">{isExpanded ? "Hide" : "Show"}</span>
-                  </button>
 
-                  <div
-                    className={`result-tracks${isExpanded ? " is-open" : ""}`}
-                    aria-hidden={!isExpanded}
-                  >
-                    <div className="result-tracks-inner">
-                      <table className="tracks-table">
-                        <thead>
-                          <tr>
-                            <th>#</th>
-                            <th>Track</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(r.tracks ?? []).flatMap((t, i) => {
-                            const key = `${r.program_number}-${i}`;
-                            const isTrackExpanded = expandedTrackKey === key;
+                    <div
+                      className={`result-tracks${isExpanded ? " is-open" : ""}`}
+                      aria-hidden={!isExpanded}
+                    >
+                      <div className="result-tracks-inner">
+                        <table className="tracks-table">
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>Track</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(r.tracks ?? []).flatMap((t, i) => {
+                              const key = `${r.program_number}-${i}`;
+                              const isTrackExpanded = expandedTrackKey === key;
 
-                            return [
-                              <tr key={`track-${key}`} className={`track-row${isTrackExpanded ? " is-open" : ""}`}>
-                                <td>{i + 1}</td>
-                                <td>
-                                  <button
-                                    type="button"
-                                    className="track-name-button"
-                                    onClick={() => toggleTrackDetails(r.program_number, i)}
-                                    aria-expanded={isTrackExpanded}
-                                  >
-                                    {t.track || "-"}
-                                  </button>
-                                </td>
-                              </tr>,
-                              <tr
-                                key={`meta-${key}`}
-                                className={`track-meta-row${isTrackExpanded ? " is-open" : ""}`}
-                                aria-hidden={!isTrackExpanded}
-                              >
-                                <td colSpan={2}>
-                                  <div className="track-meta-panel">
-                                    <div className="track-meta-item">
-                                      <span className="track-meta-label">Artist</span>
-                                      <span className="track-meta-value">{t.artist || "-"}</span>
+                              return [
+                                <tr
+                                  key={`track-${key}`}
+                                  className={`track-row${isTrackExpanded ? " is-open" : ""}`}
+                                >
+                                  <td>{i + 1}</td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="track-name-button"
+                                      onClick={() => toggleTrackDetails(r.program_number, i)}
+                                      aria-expanded={isTrackExpanded}
+                                    >
+                                      {t.track || "-"}
+                                    </button>
+                                  </td>
+                                </tr>,
+                                <tr
+                                  key={`meta-${key}`}
+                                  className={`track-meta-row${isTrackExpanded ? " is-open" : ""}`}
+                                  aria-hidden={!isTrackExpanded}
+                                >
+                                  <td colSpan={2}>
+                                    <div className="track-meta-panel">
+                                      <div className="track-meta-item">
+                                        <span className="track-meta-label">Artist</span>
+                                        <span className="track-meta-value">{t.artist || "-"}</span>
+                                      </div>
+                                      <div className="track-meta-item">
+                                        <span className="track-meta-label">Album</span>
+                                        <span className="track-meta-value">{t.album || "-"}</span>
+                                      </div>
                                     </div>
-                                    <div className="track-meta-item">
-                                      <span className="track-meta-label">Album</span>
-                                      <span className="track-meta-value">{t.album || "-"}</span>
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>,
-                            ];
-                          })}
-                        </tbody>
-                      </table>
+                                  </td>
+                                </tr>,
+                              ];
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
