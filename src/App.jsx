@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import "./App.css";
 
 const SEARCH_STATE_KEY = "hosSearchState";
+const GENRES_ENDPOINT = "https://hos.toews-api.com/api/genres";
 
 export default function App() {
   const [programName, setProgramName] = useState("");
-  const [trackTitle, setTrackTitle] = useState("");
-  const [artist, setArtist] = useState("");
-  const [album, setAlbum] = useState("");
+  const [genres, setGenres] = useState([]);
+  const [genre, setGenre] = useState("");
+  const [programDescription, setProgramDescription] = useState("");
   const [description, setDescription] = useState("");
   const [results, setResults] = useState([]);
   const [noResultsMessage, setNoResultsMessage] = useState("");
@@ -30,16 +31,12 @@ export default function App() {
         setProgramName(parsedState.programName);
       }
 
-      if (typeof parsedState.trackTitle === "string") {
-        setTrackTitle(parsedState.trackTitle);
+      if (typeof parsedState.genre === "string") {
+        setGenre(parsedState.genre);
       }
 
-      if (typeof parsedState.artist === "string") {
-        setArtist(parsedState.artist);
-      }
-
-      if (typeof parsedState.album === "string") {
-        setAlbum(parsedState.album);
+      if (typeof parsedState.programDescription === "string") {
+        setProgramDescription(parsedState.programDescription);
       }
 
       if (typeof parsedState.description === "string") {
@@ -60,27 +57,87 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadGenres = async () => {
+      try {
+        const res = await fetch(GENRES_ENDPOINT);
+        if (!res.ok) {
+          throw new Error("Failed to load genres");
+        }
+
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+          return;
+        }
+
+        const normalizedGenres = data
+          .filter((item) => item && typeof item.genre === "string")
+          .map((item) => ({ id: item.id, genre: item.genre.trim() }))
+          .filter((item) => item.genre.length > 0);
+
+        if (isMounted) {
+          setGenres(normalizedGenres);
+        }
+      } catch {
+        if (isMounted) {
+          setGenres([]);
+        }
+      }
+    };
+
+    loadGenres();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const isGenreAllowed = (value) => {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return true;
+    }
+
+    return genres.some((item) => item.genre.toLowerCase() === normalized);
+  };
+
+  const handleGenreChange = (e) => {
+    setGenre(e.target.value);
+    setNoResultsMessage("");
+  };
+
+  const handleGenreBlur = () => {
+    if (!isGenreAllowed(genre)) {
+      setGenre("");
+      setNoResultsMessage("Please choose a genre from the list.");
+    }
+  };
+
   const handleSearch = async () => {
     const payload = {};
+    const trimmedGenre = genre.trim();
 
     if (programName.trim()) {
       payload.program_name = programName.trim();
     }
 
+    if (trimmedGenre && !isGenreAllowed(trimmedGenre)) {
+      setNoResultsMessage("Please choose a genre from the list.");
+      return;
+    }
+
+    if (trimmedGenre) {
+      payload.genre = trimmedGenre;
+    }
+
+    if (programDescription.trim()) {
+      payload.program_content = programDescription.trim();
+    }
+
     if (description.trim()) {
       payload.text = description.trim();
-    }
-
-    if (trackTitle.trim()) {
-      payload.title = trackTitle.trim();
-    }
-
-    if (artist.trim()) {
-      payload.artist = artist.trim();
-    }
-
-    if (album.trim()) {
-      payload.album = album.trim();
     }
 
     setIsLoading(true);
@@ -107,9 +164,8 @@ export default function App() {
         JSON.stringify({
           query: description,
           programName,
-          trackTitle,
-          artist,
-          album,
+          genre,
+          programDescription,
           description,
           results: data,
         }),
@@ -133,9 +189,8 @@ export default function App() {
 
   const handleResetFields = () => {
     setProgramName("");
-    setTrackTitle("");
-    setArtist("");
-    setAlbum("");
+    setGenre("");
+    setProgramDescription("");
     setDescription("");
     setNoResultsMessage("");
 
@@ -144,9 +199,8 @@ export default function App() {
       JSON.stringify({
         query: "",
         programName: "",
-        trackTitle: "",
-        artist: "",
-        album: "",
+        genre: "",
+        programDescription: "",
         description: "",
         results,
       }),
@@ -155,9 +209,8 @@ export default function App() {
 
   const handleTitleClick = () => {
     setProgramName("");
-    setTrackTitle("");
-    setArtist("");
-    setAlbum("");
+    setGenre("");
+    setProgramDescription("");
     setDescription("");
     setResults([]);
     setNoResultsMessage("");
@@ -170,9 +223,8 @@ export default function App() {
       JSON.stringify({
         query: "",
         programName: "",
-        trackTitle: "",
-        artist: "",
-        album: "",
+        genre: "",
+        programDescription: "",
         description: "",
         results: [],
       }),
@@ -183,9 +235,8 @@ export default function App() {
     if (!isSearchPanelOpen) {
       // Opening the panel: reset fields
       setProgramName("");
-      setTrackTitle("");
-      setArtist("");
-      setAlbum("");
+      setGenre("");
+      setProgramDescription("");
       setDescription("");
     }
     setIsSearchPanelOpen((value) => !value);
@@ -251,31 +302,34 @@ export default function App() {
 
                 <input
                   type="text"
-                  placeholder="Track title"
-                  value={trackTitle}
-                  onChange={(e) => setTrackTitle(e.target.value)}
+                  placeholder="Genre"
+                  value={genre}
+                  onChange={handleGenreChange}
+                  onBlur={handleGenreBlur}
+                  list="genre-options"
+                  autoComplete="off"
                   className="search-text-input"
                 />
+                <datalist id="genre-options">
+                  {genres.map((item, index) => (
+                    <option
+                      key={`${String(item.id ?? item.genre)}-${index}`}
+                      value={item.genre}
+                    />
+                  ))}
+                </datalist>
 
                 <input
                   type="text"
-                  placeholder="Artist"
-                  value={artist}
-                  onChange={(e) => setArtist(e.target.value)}
-                  className="search-text-input"
-                />
-
-                <input
-                  type="text"
-                  placeholder="Album"
-                  value={album}
-                  onChange={(e) => setAlbum(e.target.value)}
-                  className="search-text-input"
+                  placeholder="Program Description, Playlist content"
+                  value={programDescription}
+                  onChange={(e) => setProgramDescription(e.target.value)}
+                  className="search-text-input search-text-input-full"
                 />
 
                 <textarea
                   rows={2}
-                  placeholder="Description"
+                  placeholder="Mood"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="search-input"
