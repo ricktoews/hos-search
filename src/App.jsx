@@ -15,7 +15,7 @@ export default function App() {
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(true);
   const [expandedProgram, setExpandedProgram] = useState(null);
   const [expandedTrackKey, setExpandedTrackKey] = useState(null);
-  const showSearchToggle = results.length > 0 || Boolean(noResultsMessage);
+  const showSearchToggle = results.length > 0;
 
   useEffect(() => {
     const savedState = sessionStorage.getItem(SEARCH_STATE_KEY);
@@ -85,6 +85,7 @@ export default function App() {
 
     setIsLoading(true);
     setNoResultsMessage("");
+    setResults([]);
     setExpandedProgram(null);
     setExpandedTrackKey(null);
 
@@ -152,6 +153,44 @@ export default function App() {
     );
   };
 
+  const handleTitleClick = () => {
+    setProgramName("");
+    setTrackTitle("");
+    setArtist("");
+    setAlbum("");
+    setDescription("");
+    setResults([]);
+    setNoResultsMessage("");
+    setIsSearchPanelOpen(true);
+    setExpandedProgram(null);
+    setExpandedTrackKey(null);
+
+    sessionStorage.setItem(
+      SEARCH_STATE_KEY,
+      JSON.stringify({
+        query: "",
+        programName: "",
+        trackTitle: "",
+        artist: "",
+        album: "",
+        description: "",
+        results: [],
+      }),
+    );
+  };
+
+  const handleSearchToggleClick = () => {
+    if (!isSearchPanelOpen) {
+      // Opening the panel: reset fields
+      setProgramName("");
+      setTrackTitle("");
+      setArtist("");
+      setAlbum("");
+      setDescription("");
+    }
+    setIsSearchPanelOpen((value) => !value);
+  };
+
   return (
     <div className="app-shell">
       <div
@@ -170,14 +209,21 @@ export default function App() {
             />
             <span className="header-tagline">SLOW MUSIC FOR FAST TIMES</span>
           </div>
-          <h1 className="page-title">Archive Search</h1>
+          <button
+            type="button"
+            onClick={handleTitleClick}
+            className="page-title"
+            aria-label="Clear search and return to original state"
+          >
+            Archive Search
+          </button>
         </header>
 
         {showSearchToggle && (
           <div className="search-toggle-bar">
             <button
               type="button"
-              onClick={() => setIsSearchPanelOpen((value) => !value)}
+              onClick={handleSearchToggleClick}
               className="search-toggle-button"
             >
               {isSearchPanelOpen ? "Close" : "Search"}
