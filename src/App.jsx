@@ -3,17 +3,17 @@ import "./App.css";
 
 const SEARCH_STATE_KEY = "hosSearchState";
 
-const formatDuration = (seconds) => {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-};
-
 export default function App() {
-  const [query, setQuery] = useState("");
+  const [programName, setProgramName] = useState("");
+  const [trackTitle, setTrackTitle] = useState("");
+  const [artist, setArtist] = useState("");
+  const [album, setAlbum] = useState("");
+  const [description, setDescription] = useState("");
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(true);
   const [expandedProgram, setExpandedProgram] = useState(null);
+  const [expandedTrackKey, setExpandedTrackKey] = useState(null);
 
   useEffect(() => {
     const savedState = sessionStorage.getItem(SEARCH_STATE_KEY);
@@ -24,12 +24,34 @@ export default function App() {
     try {
       const parsedState = JSON.parse(savedState);
 
-      if (typeof parsedState.query === "string") {
-        setQuery(parsedState.query);
+      if (typeof parsedState.programName === "string") {
+        setProgramName(parsedState.programName);
+      }
+
+      if (typeof parsedState.trackTitle === "string") {
+        setTrackTitle(parsedState.trackTitle);
+      }
+
+      if (typeof parsedState.artist === "string") {
+        setArtist(parsedState.artist);
+      }
+
+      if (typeof parsedState.album === "string") {
+        setAlbum(parsedState.album);
+      }
+
+      if (typeof parsedState.description === "string") {
+        setDescription(parsedState.description);
+      } else if (typeof parsedState.query === "string") {
+        // Backward compatibility for previously saved single-text searches.
+        setDescription(parsedState.query);
       }
 
       if (Array.isArray(parsedState.results)) {
         setResults(parsedState.results);
+        if (parsedState.results.length > 0) {
+          setIsSearchPanelOpen(false);
+        }
       }
     } catch {
       sessionStorage.removeItem(SEARCH_STATE_KEY);
@@ -37,8 +59,31 @@ export default function App() {
   }, []);
 
   const handleSearch = async () => {
+    const payload = {};
+
+    if (programName.trim()) {
+      payload.program_name = programName.trim();
+    }
+
+    if (description.trim()) {
+      payload.text = description.trim();
+    }
+
+    if (trackTitle.trim()) {
+      payload.title = trackTitle.trim();
+    }
+
+    if (artist.trim()) {
+      payload.artist = artist.trim();
+    }
+
+    if (album.trim()) {
+      payload.album = album.trim();
+    }
+
     setIsLoading(true);
     setExpandedProgram(null);
+    setExpandedTrackKey(null);
 
     try {
       const res = await fetch("https://hos.toews-api.com/api/search", {
@@ -46,15 +91,21 @@ export default function App() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: query }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       setResults(data);
+      setIsSearchPanelOpen(false);
       sessionStorage.setItem(
         SEARCH_STATE_KEY,
         JSON.stringify({
-          query,
+          query: description,
+          programName,
+          trackTitle,
+          artist,
+          album,
+          description,
           results: data,
         }),
       );
@@ -66,6 +117,33 @@ export default function App() {
   const toggleExpanded = (programNumber) => {
     setExpandedProgram((current) =>
       current === programNumber ? null : programNumber,
+    );
+    setExpandedTrackKey(null);
+  };
+
+  const toggleTrackDetails = (programNumber, trackIndex) => {
+    const key = `${programNumber}-${trackIndex}`;
+    setExpandedTrackKey((current) => (current === key ? null : key));
+  };
+
+  const handleResetFields = () => {
+    setProgramName("");
+    setTrackTitle("");
+    setArtist("");
+    setAlbum("");
+    setDescription("");
+
+    sessionStorage.setItem(
+      SEARCH_STATE_KEY,
+      JSON.stringify({
+        query: "",
+        programName: "",
+        trackTitle: "",
+        artist: "",
+        album: "",
+        description: "",
+        results,
+      }),
     );
   };
 
@@ -83,37 +161,94 @@ export default function App() {
         <h1 className="page-title">Archive Search</h1>
       </header>
 
+      {results.length > 0 && (
+        <div className="search-toggle-bar">
+          <button
+            type="button"
+            onClick={() => setIsSearchPanelOpen((v) => !v)}
+            className="search-toggle-button"
+          >
+            <svg className="toggle-btn-bg" viewBox="0 0 140 34" preserveAspectRatio="none" aria-hidden="true">
+              <polygon points="0,0 140,0 112,34 28,34" fill="none" stroke="rgba(0,200,180,0.45)" strokeWidth="4" vectorEffect="non-scaling-stroke" />
+              <polygon points="0,0 140,0 112,34 28,34" fill="rgba(6,10,14,0.96)" />
+            </svg>
+            <span className="toggle-btn-label">{isSearchPanelOpen ? "Close" : "Search"}</span>
+          </button>
+        </div>
+      )}
+
       <div className="search-body">
         <div className="search-sticky">
-        <div className="search-controls">
-        <textarea
-          rows={2}
-          placeholder="Describe a mood..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="search-input"
-        />
 
-        <button
-          type="button"
-          onClick={handleSearch}
-          disabled={isLoading}
-          className="search-button"
-          aria-label="Search"
-          title="Search"
-        >
-          <svg
-            className="search-button-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
+          <div
+            id="search-fields-panel"
+            className={[
+              "search-panel",
+              isSearchPanelOpen ? "is-open" : "",
+            ].filter(Boolean).join(" ")}
           >
-            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-            <path d="M20 20L16.65 16.65" stroke="currentColor" strokeWidth="2" />
-          </svg>
-        </button>
-      </div>
+            <div className="search-fields">
+              <input
+                type="text"
+                placeholder="Program Name"
+                value={programName}
+                onChange={(e) => setProgramName(e.target.value)}
+                className="search-text-input"
+              />
+
+              <input
+                type="text"
+                placeholder="Track title"
+                value={trackTitle}
+                onChange={(e) => setTrackTitle(e.target.value)}
+                className="search-text-input"
+              />
+
+              <input
+                type="text"
+                placeholder="Artist"
+                value={artist}
+                onChange={(e) => setArtist(e.target.value)}
+                className="search-text-input"
+              />
+
+              <input
+                type="text"
+                placeholder="Album"
+                value={album}
+                onChange={(e) => setAlbum(e.target.value)}
+                className="search-text-input"
+              />
+
+              <textarea
+                rows={2}
+                placeholder="Description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="search-input"
+              />
+
+              <div className="search-panel-actions">
+                <button
+                  type="button"
+                  onClick={handleResetFields}
+                  disabled={isLoading}
+                  className="search-reset-button"
+                >
+                  Reset
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  disabled={isLoading}
+                  className="search-submit-button"
+                >
+                  {isLoading ? "Searching..." : "Search Archive"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>{/* end search-sticky */}
 
       <div className="search-results">
@@ -157,7 +292,7 @@ export default function App() {
                         <polygon points="5,3 19,12 5,21" />
                       </svg>
                     </button>
-                    <div>
+                    <div className="result-content">
                       <strong className="result-title">
                         #{r.program_number} - {r.title}
                       </strong>
@@ -166,8 +301,11 @@ export default function App() {
                     <span className="result-toggle">{isExpanded ? "Hide" : "Show"}</span>
                   </button>
 
-                  {isExpanded && (
-                    <div className="result-tracks">
+                  <div
+                    className={`result-tracks${isExpanded ? " is-open" : ""}`}
+                    aria-hidden={!isExpanded}
+                  >
+                    <div className="result-tracks-inner">
                       <table className="tracks-table">
                         <thead>
                           <tr>
@@ -176,22 +314,55 @@ export default function App() {
                           </tr>
                         </thead>
                         <tbody>
-                          {(r.tracks ?? []).map((t, i) => (
-                            <tr key={i}>
-                              <td>{i + 1}</td>
-                              <td>{t.track}</td>
-                            </tr>
-                          ))}
+                          {(r.tracks ?? []).flatMap((t, i) => {
+                            const key = `${r.program_number}-${i}`;
+                            const isTrackExpanded = expandedTrackKey === key;
+
+                            return [
+                              <tr key={`track-${key}`} className={`track-row${isTrackExpanded ? " is-open" : ""}`}>
+                                <td>{i + 1}</td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="track-name-button"
+                                    onClick={() => toggleTrackDetails(r.program_number, i)}
+                                    aria-expanded={isTrackExpanded}
+                                  >
+                                    {t.track || "-"}
+                                  </button>
+                                </td>
+                              </tr>,
+                              <tr
+                                key={`meta-${key}`}
+                                className={`track-meta-row${isTrackExpanded ? " is-open" : ""}`}
+                                aria-hidden={!isTrackExpanded}
+                              >
+                                <td colSpan={2}>
+                                  <div className="track-meta-panel">
+                                    <div className="track-meta-item">
+                                      <span className="track-meta-label">Artist</span>
+                                      <span className="track-meta-value">{t.artist || "-"}</span>
+                                    </div>
+                                    <div className="track-meta-item">
+                                      <span className="track-meta-label">Album</span>
+                                      <span className="track-meta-value">{t.album || "-"}</span>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>,
+                            ];
+                          })}
                         </tbody>
                       </table>
                     </div>
-                  )}
+                  </div>
                 </article>
               );
             })}
           </div>
         )}
       </div>
+
       </div>
     </div>
   );
