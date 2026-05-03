@@ -477,6 +477,7 @@ export default function App() {
                         <button
                           type="button"
                           className="play-button"
+                          title="Play on HOS"
                           aria-label={`Play ${r.title}`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -494,6 +495,7 @@ export default function App() {
                         <button
                           type="button"
                           className="result-info-button"
+                          title="Program details"
                           aria-label={`${isDescriptionExpanded ? "Hide" : "Show"} description for ${r.title}`}
                           aria-expanded={isDescriptionExpanded}
                           onClick={(e) => {
@@ -510,6 +512,7 @@ export default function App() {
                         <button
                           type="button"
                           className="result-playlist-button"
+                          title="Show playlist"
                           aria-label={`${isExpanded ? "Hide" : "Show"} playlist for ${r.title}`}
                           aria-expanded={isExpanded}
                           onClick={(e) => {
@@ -568,6 +571,8 @@ export default function App() {
                             <tr>
                               <th>#</th>
                               <th>Track</th>
+                              <th className="track-col-artist">Artist</th>
+                              <th className="track-col-album">Album</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -591,13 +596,15 @@ export default function App() {
                                       {t.track || "-"}
                                     </button>
                                   </td>
+                                  <td className="track-col-artist">{t.artist || "-"}</td>
+                                  <td className="track-col-album">{t.album || "-"}</td>
                                 </tr>,
                                 <tr
                                   key={`meta-${key}`}
                                   className={`track-meta-row${isTrackExpanded ? " is-open" : ""}`}
                                   aria-hidden={!isTrackExpanded}
                                 >
-                                  <td colSpan={2}>
+                                  <td colSpan={4}>
                                     <div className="track-meta-panel">
                                       <div className="track-meta-item">
                                         <span className="track-meta-label">Artist</span>

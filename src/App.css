@@ -444,6 +444,31 @@
   color: var(--text-h);
 }
 
+@media (min-width: 769px) {
+  .search-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .search-results {
+    width: 100%;
+  }
+
+  .track-meta-row {
+    display: none;
+  }
+
+  .track-name-button {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .track-name-button:hover {
+    color: inherit;
+  }
+}
+
 @media (max-width: 768px) {
   .app-shell {
     border-radius: 0.4rem;
@@ -520,6 +545,11 @@
 
   .tracks-table {
     font-size: 0.82rem;
+  }
+
+  .track-col-artist,
+  .track-col-album {
+    display: none;
   }
 }
 
@@ -923,6 +953,16 @@
   color: var(--text);
   width: 2rem;
   text-align: right;
+}
+
+.track-col-artist,
+.track-col-album {
+  color: var(--text);
+  font-size: 0.84rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 18ch;
 }
 
 
