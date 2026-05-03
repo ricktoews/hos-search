@@ -526,9 +526,16 @@ export default function App() {
                         </button>
                       </div>
                       <div className="result-content">
-                        <strong className="result-title">
-                          #{r.program_number} - {r.title}
-                        </strong>
+                        <div className="result-title-row">
+                          <strong className="result-title">
+                            #{r.program_number} - {r.title}
+                          </strong>
+                          {r.program_date && (
+                            <span className="result-date">
+                              {new Date(r.program_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                            </span>
+                          )}
+                        </div>
                         <div className="result-description">{r.short_description}</div>
                         <button
                           type="button"
