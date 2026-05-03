@@ -15,6 +15,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(true);
   const [expandedProgram, setExpandedProgram] = useState(null);
+  const [expandedDescriptionProgram, setExpandedDescriptionProgram] = useState(null);
   const [expandedTrackKey, setExpandedTrackKey] = useState(null);
   const showSearchToggle = results.length > 0;
 
@@ -144,6 +145,7 @@ export default function App() {
     setNoResultsMessage("");
     setResults([]);
     setExpandedProgram(null);
+    setExpandedDescriptionProgram(null);
     setExpandedTrackKey(null);
 
     try {
@@ -179,6 +181,15 @@ export default function App() {
     setExpandedProgram((current) =>
       current === programNumber ? null : programNumber,
     );
+    setExpandedTrackKey(null);
+    setExpandedDescriptionProgram(null);
+  };
+
+  const toggleProgramDescription = (programNumber) => {
+    setExpandedDescriptionProgram((current) =>
+      current === programNumber ? null : programNumber,
+    );
+    setExpandedProgram(null);
     setExpandedTrackKey(null);
   };
 
@@ -216,6 +227,7 @@ export default function App() {
     setNoResultsMessage("");
     setIsSearchPanelOpen(true);
     setExpandedProgram(null);
+    setExpandedDescriptionProgram(null);
     setExpandedTrackKey(null);
 
     sessionStorage.setItem(
@@ -379,6 +391,8 @@ export default function App() {
             <div className="results-list">
               {results.map((r) => {
                 const isExpanded = expandedProgram === r.program_number;
+                const isDescriptionExpanded =
+                  expandedDescriptionProgram === r.program_number;
 
                 return (
                   <article
@@ -414,8 +428,43 @@ export default function App() {
                         </strong>
                         <div className="result-description">{r.short_description}</div>
                       </div>
-                      <span className="result-toggle">{isExpanded ? "Hide" : "Show"}</span>
+                      <div className="result-actions">
+                        <button
+                          type="button"
+                          className="result-info-button"
+                          aria-label={`${isDescriptionExpanded ? "Hide" : "Show"} description for ${r.title}`}
+                          aria-expanded={isDescriptionExpanded}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleProgramDescription(r.program_number);
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+                            <path
+                              d="M12 10.25V16"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                            />
+                            <circle cx="12" cy="7.5" r="1" fill="currentColor" />
+                          </svg>
+                        </button>
+                        <span className="result-toggle">{isExpanded ? "Hide" : "Show"}</span>
+                      </div>
                     </button>
+
+                    <div
+                      className={`result-program-description${isDescriptionExpanded ? " is-open" : ""}`}
+                      aria-hidden={!isDescriptionExpanded}
+                    >
+                      <div
+                        className="result-program-description-inner"
+                        dangerouslySetInnerHTML={{
+                          __html: r.description || "No program description available.",
+                        }}
+                      />
+                    </div>
 
                     <div
                       className={`result-tracks${isExpanded ? " is-open" : ""}`}
