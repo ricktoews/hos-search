@@ -1,0 +1,18 @@
+<svg width="44" height="44" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="Hearts of Space style emblem">
+  <circle cx="50" cy="50" r="45" fill="#10131c" stroke="#00d8cf" stroke-width="3"/>
+
+  <g fill="#00d8cf" transform="translate(50 47) scale(0.72) translate(-50 -50)">
+    <!-- H -->
+    <rect x="22" y="15" width="10" height="34" rx="1"/>
+    <rect x="68" y="15" width="10" height="34" rx="1"/>
+    <rect x="22" y="25" width="56" height="13" rx="1"/>
+
+    <!-- S -->
+    <rect x="22" y="55" width="56" height="11" rx="1"/>
+    <rect x="22" y="70" width="56" height="11" rx="1"/>
+    <rect x="22" y="85" width="56" height="11" rx="1"/>
+
+    <rect x="22" y="55" width="10" height="26" rx="1"/>
+    <rect x="68" y="70" width="10" height="26" rx="1"/>
+  </g>
+</svg>

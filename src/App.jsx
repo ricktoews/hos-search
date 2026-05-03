@@ -17,7 +17,7 @@ export default function App() {
   const [expandedProgram, setExpandedProgram] = useState(null);
   const [expandedDescriptionProgram, setExpandedDescriptionProgram] = useState(null);
   const [expandedTrackKey, setExpandedTrackKey] = useState(null);
-  const showSearchToggle = results.length > 0;
+  const [sourceProgram, setSourceProgram] = useState(null);
 
   useEffect(() => {
     const savedState = sessionStorage.getItem(SEARCH_STATE_KEY);
@@ -52,6 +52,10 @@ export default function App() {
         if (parsedState.results.length > 0) {
           setIsSearchPanelOpen(false);
         }
+      }
+
+      if (parsedState.sourceProgram && typeof parsedState.sourceProgram === "object") {
+        setSourceProgram(parsedState.sourceProgram);
       }
     } catch {
       sessionStorage.removeItem(SEARCH_STATE_KEY);
@@ -144,6 +148,7 @@ export default function App() {
     setIsLoading(true);
     setNoResultsMessage("");
     setResults([]);
+    setSourceProgram(null);
     setExpandedProgram(null);
     setExpandedDescriptionProgram(null);
     setExpandedTrackKey(null);
@@ -193,6 +198,53 @@ export default function App() {
     setExpandedTrackKey(null);
   };
 
+  const handleMoreLikeThis = async (program) => {
+    setIsLoading(true);
+    setNoResultsMessage("");
+    setResults([]);
+    setExpandedProgram(null);
+    setExpandedDescriptionProgram(null);
+    setExpandedTrackKey(null);
+
+    const src = {
+      program_number: program.program_number,
+      title: program.title,
+      short_description: program.short_description,
+    };
+    setSourceProgram(src);
+
+    try {
+      const res = await fetch(`https://hos.toews-api.com/api/similar/${program.program_number}`);
+      if (!res.ok) {
+        throw new Error("Failed to load similar programs");
+      }
+
+      const data = await res.json();
+      const nextResults = Array.isArray(data) ? data : [];
+      setResults(nextResults);
+      setIsSearchPanelOpen(nextResults.length === 0);
+      setNoResultsMessage(nextResults.length === 0 ? "No matching results found." : "");
+      sessionStorage.setItem(
+        SEARCH_STATE_KEY,
+        JSON.stringify({
+          query: "",
+          programName: "",
+          genre: "",
+          programDescription: "",
+          description: "",
+          results: nextResults,
+          sourceProgram: src,
+        }),
+      );
+    } catch {
+      setSourceProgram(null);
+      setIsSearchPanelOpen(true);
+      setNoResultsMessage("Unable to load similar programs right now.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const toggleTrackDetails = (programNumber, trackIndex) => {
     const key = `${programNumber}-${trackIndex}`;
     setExpandedTrackKey((current) => (current === key ? null : key));
@@ -226,6 +278,7 @@ export default function App() {
     setResults([]);
     setNoResultsMessage("");
     setIsSearchPanelOpen(true);
+    setSourceProgram(null);
     setExpandedProgram(null);
     setExpandedDescriptionProgram(null);
     setExpandedTrackKey(null);
@@ -245,11 +298,17 @@ export default function App() {
 
   const handleSearchToggleClick = () => {
     if (!isSearchPanelOpen) {
-      // Opening the panel: reset fields
+      // Opening the panel: reset fields and clear any MLT context
       setProgramName("");
       setGenre("");
       setProgramDescription("");
       setDescription("");
+      setSourceProgram(null);
+      setResults([]);
+      setNoResultsMessage("");
+      setExpandedProgram(null);
+      setExpandedDescriptionProgram(null);
+      setExpandedTrackKey(null);
     }
     setIsSearchPanelOpen((value) => !value);
   };
@@ -259,7 +318,6 @@ export default function App() {
       <div
         className={[
           "top-chrome",
-          showSearchToggle ? "has-toggle" : "",
           isSearchPanelOpen ? "is-search-open" : "is-search-closed",
         ].filter(Boolean).join(" ")}
       >
@@ -267,10 +325,9 @@ export default function App() {
           <div className="header-logo-wrap">
             <img
               className="header-logo"
-              src="https://v4.hos.com/assets/images/hos-logo-white.svg"
+              src="/images/hos_emblem.svg"
               alt="Hearts of Space logo"
             />
-            <span className="header-tagline">SLOW MUSIC FOR FAST TIMES</span>
           </div>
           <button
             type="button"
@@ -280,17 +337,28 @@ export default function App() {
           >
             Archive Search
           </button>
+          <button
+            type="button"
+            className="header-search-icon"
+            onClick={handleSearchToggleClick}
+            aria-label={isSearchPanelOpen ? "Close search form" : "Open search form"}
+          >
+            <svg viewBox="0 0 24 24" fill="none">
+              <circle cx="10" cy="10" r="5.5" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M14 14L19 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
         </header>
 
-        {showSearchToggle && (
-          <div className="search-toggle-bar">
-            <button
-              type="button"
-              onClick={handleSearchToggleClick}
-              className="search-toggle-button"
-            >
-              {isSearchPanelOpen ? "Close" : "Search"}
-            </button>
+        {sourceProgram && (
+          <div className="similar-context-bar">
+            <span className="similar-context-label">Similar to</span>
+            <span className="similar-context-title">
+              #{sourceProgram.program_number} &mdash; {sourceProgram.title}
+            </span>
+            {sourceProgram.short_description && (
+              <span className="similar-context-desc">{sourceProgram.short_description}</span>
+            )}
           </div>
         )}
 
@@ -405,30 +473,24 @@ export default function App() {
                       onClick={() => toggleExpanded(r.program_number)}
                       aria-expanded={isExpanded}
                     >
-                      <button
-                        type="button"
-                        className="play-button"
-                        aria-label={`Play ${r.title}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(
-                            `https://www.hos.com/programs/details/${r.program_number}?utm_campaign=shareaholic&utm_medium=copy_link&utm_source=bookmark`,
-                            "_blank",
-                            "noopener,noreferrer",
-                          );
-                        }}
-                      >
-                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                          <polygon points="5,3 19,12 5,21" />
-                        </svg>
-                      </button>
-                      <div className="result-content">
-                        <strong className="result-title">
-                          #{r.program_number} - {r.title}
-                        </strong>
-                        <div className="result-description">{r.short_description}</div>
-                      </div>
-                      <div className="result-actions">
+                      <div className="result-button-col">
+                        <button
+                          type="button"
+                          className="play-button"
+                          aria-label={`Play ${r.title}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(
+                              `https://www.hos.com/programs/details/${r.program_number}?utm_campaign=shareaholic&utm_medium=copy_link&utm_source=bookmark`,
+                              "_blank",
+                              "noopener,noreferrer",
+                            );
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <polygon points="5,3 19,12 5,21" />
+                          </svg>
+                        </button>
                         <button
                           type="button"
                           className="result-info-button"
@@ -441,16 +503,46 @@ export default function App() {
                         >
                           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-                            <path
-                              d="M12 10.25V16"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                            />
+                            <path d="M12 10.25V16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                             <circle cx="12" cy="7.5" r="1" fill="currentColor" />
                           </svg>
                         </button>
-                        <span className="result-toggle">{isExpanded ? "Hide" : "Show"}</span>
+                        <button
+                          type="button"
+                          className="result-playlist-button"
+                          aria-label={`${isExpanded ? "Hide" : "Show"} playlist for ${r.title}`}
+                          aria-expanded={isExpanded}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleExpanded(r.program_number);
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="result-content">
+                        <strong className="result-title">
+                          #{r.program_number} - {r.title}
+                        </strong>
+                        <div className="result-description">{r.short_description}</div>
+                        <button
+                          type="button"
+                          className="result-more-button"
+                          aria-label={`Find more programs like ${r.title}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoreLikeThis(r);
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle cx="10" cy="10" r="5.5" stroke="currentColor" strokeWidth="1.8" />
+                            <path d="M14 14L19 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            <path d="M10 7.5v5M7.5 10h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                          </svg>
+                          <span>More like this</span>
+                        </button>
                       </div>
                     </button>
 
