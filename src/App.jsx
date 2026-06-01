@@ -3,63 +3,111 @@ import "./App.css";
 
 const SEARCH_STATE_KEY = "hosSearchState";
 const GENRES_ENDPOINT = "https://hos.toews-api.com/api/genres";
+const PROGRAMS_ENDPOINT = "https://hos.toews-api.com/api/programs";
+const SEARCH_ENDPOINT = "https://hos.toews-api.com/api/search";
+const PRESET_MOODS_ENDPOINT = "https://hos.toews-api.com/api/preset-moods";
+const PRESET_MOOD_LIMIT = 100;
+const PRESET_MOOD_TOP_POOL_SIZE = 20;
+const PRESET_MOOD_TOP_SAMPLE_SIZE = 5;
+const PRESET_MOOD_REST_SAMPLE_SIZE = 5;
+
+const loadSavedSearchState = () => {
+  const savedState = window.sessionStorage.getItem(SEARCH_STATE_KEY);
+  if (!savedState) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(savedState);
+  } catch {
+    window.sessionStorage.removeItem(SEARCH_STATE_KEY);
+    return {};
+  }
+};
+
+const getInitialSearchMode = () =>
+  window.location.hash === "#advanced-search" ? "advanced" : "basic";
+
+const getRandomSample = (items, count) => {
+  const pool = [...items];
+
+  for (let i = pool.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  return pool.slice(0, count);
+};
+
+const samplePresetMoodPrograms = (programs) => [
+  ...getRandomSample(
+    programs.slice(0, PRESET_MOOD_TOP_POOL_SIZE),
+    PRESET_MOOD_TOP_SAMPLE_SIZE,
+  ),
+  ...getRandomSample(
+    programs.slice(PRESET_MOOD_TOP_POOL_SIZE),
+    PRESET_MOOD_REST_SAMPLE_SIZE,
+  ),
+];
 
 export default function App() {
-  const [programName, setProgramName] = useState("");
+  const [savedState] = useState(loadSavedSearchState);
+  const initialResults = Array.isArray(savedState.results) ? savedState.results : [];
+  const initialDescription =
+    typeof savedState.description === "string"
+      ? savedState.description
+      : typeof savedState.query === "string"
+        ? savedState.query
+        : "";
+
+  const [programNumber, setProgramNumber] = useState(
+    typeof savedState.programNumber === "string" ? savedState.programNumber : "",
+  );
+  const [programName, setProgramName] = useState(
+    typeof savedState.programName === "string" ? savedState.programName : "",
+  );
+  const [genre, setGenre] = useState(
+    typeof savedState.genre === "string" ? savedState.genre : "",
+  );
+  const [programDescription, setProgramDescription] = useState(
+    typeof savedState.programDescription === "string" ? savedState.programDescription : "",
+  );
+  const [description, setDescription] = useState(initialDescription);
   const [genres, setGenres] = useState([]);
-  const [genre, setGenre] = useState("");
-  const [programDescription, setProgramDescription] = useState("");
-  const [description, setDescription] = useState("");
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState(initialResults);
   const [noResultsMessage, setNoResultsMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(true);
+  const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(initialResults.length === 0);
+  const [searchMode, setSearchMode] = useState(getInitialSearchMode);
   const [expandedProgram, setExpandedProgram] = useState(null);
   const [expandedDescriptionProgram, setExpandedDescriptionProgram] = useState(null);
   const [expandedTrackKey, setExpandedTrackKey] = useState(null);
-  const [sourceProgram, setSourceProgram] = useState(null);
+  const [sourceProgram, setSourceProgram] = useState(
+    savedState.sourceProgram && typeof savedState.sourceProgram === "object"
+      ? savedState.sourceProgram
+      : null,
+  );
+  const [presetMoods, setPresetMoods] = useState([]);
+  const [isMoodIdeasOpen, setIsMoodIdeasOpen] = useState(false);
+  const [isPresetMoodsLoading, setIsPresetMoodsLoading] = useState(false);
+  const [presetMoodsMessage, setPresetMoodsMessage] = useState("");
+  const [selectedPresetMood, setSelectedPresetMood] = useState(
+    savedState.selectedPresetMood && typeof savedState.selectedPresetMood === "object"
+      ? savedState.selectedPresetMood
+      : null,
+  );
 
   useEffect(() => {
-    const savedState = sessionStorage.getItem(SEARCH_STATE_KEY);
-    if (!savedState) {
-      return;
-    }
+    const handleLocationChange = () => {
+      setSearchMode(getInitialSearchMode());
+    };
 
-    try {
-      const parsedState = JSON.parse(savedState);
-
-      if (typeof parsedState.programName === "string") {
-        setProgramName(parsedState.programName);
-      }
-
-      if (typeof parsedState.genre === "string") {
-        setGenre(parsedState.genre);
-      }
-
-      if (typeof parsedState.programDescription === "string") {
-        setProgramDescription(parsedState.programDescription);
-      }
-
-      if (typeof parsedState.description === "string") {
-        setDescription(parsedState.description);
-      } else if (typeof parsedState.query === "string") {
-        // Backward compatibility for previously saved single-text searches.
-        setDescription(parsedState.query);
-      }
-
-      if (Array.isArray(parsedState.results)) {
-        setResults(parsedState.results);
-        if (parsedState.results.length > 0) {
-          setIsSearchPanelOpen(false);
-        }
-      }
-
-      if (parsedState.sourceProgram && typeof parsedState.sourceProgram === "object") {
-        setSourceProgram(parsedState.sourceProgram);
-      }
-    } catch {
-      sessionStorage.removeItem(SEARCH_STATE_KEY);
-    }
+    window.addEventListener("hashchange", handleLocationChange);
+    window.addEventListener("popstate", handleLocationChange);
+    return () => {
+      window.removeEventListener("hashchange", handleLocationChange);
+      window.removeEventListener("popstate", handleLocationChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -99,6 +147,25 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isMoodIdeasOpen) {
+      return undefined;
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setIsMoodIdeasOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMoodIdeasOpen]);
+
+  const isAdvancedSearch = searchMode === "advanced";
+
   const isGenreAllowed = (value) => {
     const normalized = value.trim().toLowerCase();
     if (!normalized) {
@@ -120,24 +187,41 @@ export default function App() {
     }
   };
 
+  const handleDescriptionChange = (e) => {
+    const nextDescription = e.target.value;
+    setDescription(nextDescription);
+
+    if (
+      selectedPresetMood &&
+      nextDescription.trim() !== selectedPresetMood.embedding_text.trim()
+    ) {
+      setSelectedPresetMood(null);
+    }
+  };
+
   const handleSearch = async () => {
     const payload = {};
+    const trimmedProgramNumber = programNumber.trim();
     const trimmedGenre = genre.trim();
+    const useSelectedPresetMood =
+      selectedPresetMood &&
+      !trimmedProgramNumber &&
+      description.trim() === selectedPresetMood.embedding_text.trim();
 
     if (programName.trim()) {
       payload.program_name = programName.trim();
     }
 
-    if (trimmedGenre && !isGenreAllowed(trimmedGenre)) {
+    if (isAdvancedSearch && trimmedGenre && !isGenreAllowed(trimmedGenre)) {
       setNoResultsMessage("Please choose a genre from the list.");
       return;
     }
 
-    if (trimmedGenre) {
+    if (isAdvancedSearch && trimmedGenre) {
       payload.genre = trimmedGenre;
     }
 
-    if (programDescription.trim()) {
+    if (isAdvancedSearch && programDescription.trim()) {
       payload.program_content = programDescription.trim();
     }
 
@@ -154,29 +238,166 @@ export default function App() {
     setExpandedTrackKey(null);
 
     try {
-      const res = await fetch("https://hos.toews-api.com/api/search", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const data = trimmedProgramNumber
+        ? await fetchProgramByNumber(trimmedProgramNumber)
+        : useSelectedPresetMood
+          ? await fetchPresetMoodPrograms(selectedPresetMood.slug)
+          : await fetchSearchResults(payload);
+      const nextResults = Array.isArray(data) ? data : [];
 
-      const data = await res.json();
-      setResults(data);
-      setIsSearchPanelOpen(data.length === 0);
-      setNoResultsMessage(data.length === 0 ? "No matching results found." : "");
+      setSelectedPresetMood(useSelectedPresetMood ? selectedPresetMood : null);
+      setResults(nextResults);
+      setIsSearchPanelOpen(nextResults.length === 0);
+      setNoResultsMessage(nextResults.length === 0 ? "No matching results found." : "");
       sessionStorage.setItem(
         SEARCH_STATE_KEY,
         JSON.stringify({
           query: description,
+          programNumber,
           programName,
           genre,
           programDescription,
           description,
-          results: data,
+          results: nextResults,
+          selectedPresetMood: useSelectedPresetMood ? selectedPresetMood : null,
         }),
       );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (!isLoading) {
+      handleSearch();
+    }
+  };
+
+  const handleDescriptionKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!isLoading) {
+        handleSearch();
+      }
+    }
+  };
+
+  const fetchProgramByNumber = async (number) => {
+    const res = await fetch(`${PROGRAMS_ENDPOINT}/${encodeURIComponent(number)}`);
+    if (!res.ok) {
+      return [];
+    }
+
+    const data = await res.json();
+    return data && typeof data === "object" ? [data] : [];
+  };
+
+  const fetchSearchResults = async (payload) => {
+    const res = await fetch(SEARCH_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  };
+
+  const fetchPresetMoodPrograms = async (slug) => {
+    const res = await fetch(
+      `${PRESET_MOODS_ENDPOINT}/${encodeURIComponent(slug)}/programs?limit=${PRESET_MOOD_LIMIT}`,
+    );
+    if (!res.ok) {
+      return [];
+    }
+
+    const data = await res.json();
+    return Array.isArray(data?.programs) ? samplePresetMoodPrograms(data.programs) : [];
+  };
+
+  const loadPresetMoods = async () => {
+    setIsPresetMoodsLoading(true);
+    setPresetMoodsMessage("");
+
+    try {
+      const res = await fetch(PRESET_MOODS_ENDPOINT);
+      if (!res.ok) {
+        throw new Error("Failed to load mood ideas");
+      }
+
+      const data = await res.json();
+      const normalizedMoods = Array.isArray(data)
+        ? data.filter(
+            (item) =>
+              item &&
+              typeof item.slug === "string" &&
+              typeof item.name === "string" &&
+              typeof item.embedding_text === "string",
+          )
+        : [];
+
+      setPresetMoods(normalizedMoods);
+      setPresetMoodsMessage(
+        normalizedMoods.length === 0 ? "No mood ideas are available right now." : "",
+      );
+    } catch {
+      setPresetMoods([]);
+      setPresetMoodsMessage("Unable to load mood ideas right now.");
+    } finally {
+      setIsPresetMoodsLoading(false);
+    }
+  };
+
+  const handleMoodIdeasClick = async () => {
+    setIsMoodIdeasOpen(true);
+
+    if (presetMoods.length === 0 && !isPresetMoodsLoading) {
+      await loadPresetMoods();
+    }
+  };
+
+  const handleMoodIdeasClose = () => {
+    setIsMoodIdeasOpen(false);
+  };
+
+  const handlePresetMoodSelect = async (mood) => {
+    setDescription(mood.embedding_text);
+    setSelectedPresetMood(mood);
+    setNoResultsMessage("");
+    setIsMoodIdeasOpen(false);
+    setIsLoading(true);
+    setResults([]);
+    setSourceProgram(null);
+    setExpandedProgram(null);
+    setExpandedDescriptionProgram(null);
+    setExpandedTrackKey(null);
+
+    try {
+      const data = await fetchPresetMoodPrograms(mood.slug);
+      const nextResults = Array.isArray(data) ? data : [];
+
+      setResults(nextResults);
+      setIsSearchPanelOpen(nextResults.length === 0);
+      setNoResultsMessage(nextResults.length === 0 ? "No matching results found." : "");
+      sessionStorage.setItem(
+        SEARCH_STATE_KEY,
+        JSON.stringify({
+          query: mood.embedding_text,
+          programNumber,
+          programName,
+          genre,
+          programDescription,
+          description: mood.embedding_text,
+          results: nextResults,
+          selectedPresetMood: mood,
+        }),
+      );
+    } catch {
+      setIsSearchPanelOpen(true);
+      setNoResultsMessage("Unable to load programs for that mood right now.");
     } finally {
       setIsLoading(false);
     }
@@ -202,6 +423,7 @@ export default function App() {
     setIsLoading(true);
     setNoResultsMessage("");
     setResults([]);
+    setSelectedPresetMood(null);
     setExpandedProgram(null);
     setExpandedDescriptionProgram(null);
     setExpandedTrackKey(null);
@@ -228,12 +450,14 @@ export default function App() {
         SEARCH_STATE_KEY,
         JSON.stringify({
           query: "",
+          programNumber: "",
           programName: "",
           genre: "",
           programDescription: "",
           description: "",
           results: nextResults,
           sourceProgram: src,
+          selectedPresetMood: null,
         }),
       );
     } catch {
@@ -251,47 +475,57 @@ export default function App() {
   };
 
   const handleResetFields = () => {
+    setProgramNumber("");
     setProgramName("");
     setGenre("");
     setProgramDescription("");
     setDescription("");
+    setSelectedPresetMood(null);
     setNoResultsMessage("");
 
     sessionStorage.setItem(
       SEARCH_STATE_KEY,
       JSON.stringify({
         query: "",
+        programNumber: "",
         programName: "",
         genre: "",
         programDescription: "",
         description: "",
         results,
+        selectedPresetMood: null,
       }),
     );
   };
 
   const handleTitleClick = () => {
+    setProgramNumber("");
     setProgramName("");
     setGenre("");
     setProgramDescription("");
     setDescription("");
     setResults([]);
+    setSelectedPresetMood(null);
     setNoResultsMessage("");
     setIsSearchPanelOpen(true);
     setSourceProgram(null);
     setExpandedProgram(null);
     setExpandedDescriptionProgram(null);
     setExpandedTrackKey(null);
+    setSearchMode("basic");
+    window.history.replaceState(null, "", window.location.pathname);
 
     sessionStorage.setItem(
       SEARCH_STATE_KEY,
       JSON.stringify({
         query: "",
+        programNumber: "",
         programName: "",
         genre: "",
         programDescription: "",
         description: "",
         results: [],
+        selectedPresetMood: null,
       }),
     );
   };
@@ -299,10 +533,12 @@ export default function App() {
   const handleSearchToggleClick = () => {
     if (!isSearchPanelOpen) {
       // Opening the panel: reset fields and clear any MLT context
+      setProgramNumber("");
       setProgramName("");
       setGenre("");
       setProgramDescription("");
       setDescription("");
+      setSelectedPresetMood(null);
       setSourceProgram(null);
       setResults([]);
       setNoResultsMessage("");
@@ -314,13 +550,14 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell">
-      <div
-        className={[
-          "top-chrome",
-          isSearchPanelOpen ? "is-search-open" : "is-search-closed",
-        ].filter(Boolean).join(" ")}
-      >
+    <>
+      <div className="app-shell">
+        <div
+          className={[
+            "top-chrome",
+            isSearchPanelOpen ? "is-search-open" : "is-search-closed",
+          ].filter(Boolean).join(" ")}
+        >
         <header className="page-header">
           <div className="header-logo-wrap">
             <img
@@ -368,10 +605,20 @@ export default function App() {
               id="search-fields-panel"
               className={[
                 "search-panel",
+                isAdvancedSearch ? "is-advanced" : "",
                 isSearchPanelOpen ? "is-open" : "",
               ].filter(Boolean).join(" ")}
             >
-              <div className="search-fields">
+              <form className="search-fields" onSubmit={handleSearchSubmit}>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Program Number"
+                  value={programNumber}
+                  onChange={(e) => setProgramNumber(e.target.value)}
+                  className="search-text-input"
+                />
+
                 <input
                   type="text"
                   placeholder="Program Name"
@@ -380,38 +627,58 @@ export default function App() {
                   className="search-text-input"
                 />
 
-                <input
-                  type="text"
-                  placeholder="Genre"
-                  value={genre}
-                  onChange={handleGenreChange}
-                  onBlur={handleGenreBlur}
-                  list="genre-options"
-                  autoComplete="off"
-                  className="search-text-input"
-                />
-                <datalist id="genre-options">
-                  {genres.map((item, index) => (
-                    <option
-                      key={`${String(item.id ?? item.genre)}-${index}`}
-                      value={item.genre}
+                {isAdvancedSearch && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Genre"
+                      value={genre}
+                      onChange={handleGenreChange}
+                      onBlur={handleGenreBlur}
+                      list="genre-options"
+                      autoComplete="off"
+                      className="search-text-input"
                     />
-                  ))}
-                </datalist>
+                    <datalist id="genre-options">
+                      {genres.map((item, index) => (
+                        <option
+                          key={`${String(item.id ?? item.genre)}-${index}`}
+                          value={item.genre}
+                        />
+                      ))}
+                    </datalist>
 
-                <input
-                  type="text"
-                  placeholder="Program Description, Playlist content"
-                  value={programDescription}
-                  onChange={(e) => setProgramDescription(e.target.value)}
-                  className="search-text-input search-text-input-full"
-                />
+                    <input
+                      type="text"
+                      placeholder="Program Description, Playlist content"
+                      value={programDescription}
+                      onChange={(e) => setProgramDescription(e.target.value)}
+                      className="search-text-input search-text-input-full"
+                    />
+                  </>
+                )}
+
+                <div className="mood-ideas-link-wrap">
+                  <button
+                    type="button"
+                    className="mood-ideas-link"
+                    onClick={handleMoodIdeasClick}
+                    disabled={isLoading}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 3l1.5 5.2L19 10l-5.5 1.8L12 17l-1.5-5.2L5 10l5.5-1.8L12 3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                      <path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                    </svg>
+                    Mood Ideas
+                  </button>
+                </div>
 
                 <textarea
                   rows={2}
                   placeholder="Mood"
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={handleDescriptionChange}
+                  onKeyDown={handleDescriptionKeyDown}
                   className="search-input"
                 />
 
@@ -426,28 +693,28 @@ export default function App() {
                   </button>
 
                   <button
-                    type="button"
-                    onClick={handleSearch}
+                    type="submit"
                     disabled={isLoading}
                     className="search-submit-button"
                   >
                     {isLoading ? "Searching..." : "Search Archive"}
                   </button>
                 </div>
-              </div>
+
+              </form>
             </div>
           </div>
+          </div>
         </div>
-      </div>
 
-      <div className="search-body search-results-shell">
-        <div className="search-results">
-          {isLoading && (
-            <div className="search-loading" role="status" aria-live="polite">
-              <span className="search-spinner" aria-hidden="true" />
-              <span>Searching the archive...</span>
-            </div>
-          )}
+        <div className="search-body search-results-shell">
+          <div className="search-results">
+            {isLoading && (
+              <div className="search-loading" role="status" aria-live="polite">
+                <span className="search-spinner" aria-hidden="true" />
+                <span>Searching the archive...</span>
+              </div>
+            )}
 
           {!isLoading && noResultsMessage && (
             <div className="search-empty-state" role="status" aria-live="polite">
@@ -456,7 +723,17 @@ export default function App() {
           )}
 
           {results.length > 0 && (
-            <div className="results-list">
+            <>
+              {selectedPresetMood && (
+                <div className="preset-results-heading">
+                  <h2>{selectedPresetMood.name}</h2>
+                  {selectedPresetMood.description && (
+                    <p>{selectedPresetMood.description}</p>
+                  )}
+                </div>
+              )}
+
+              <div className="results-list">
               {results.map((r) => {
                 const isExpanded = expandedProgram === r.program_number;
                 const isDescriptionExpanded =
@@ -467,13 +744,11 @@ export default function App() {
                     key={r.program_number}
                     className={`result-row${isExpanded ? " is-expanded" : ""}`}
                   >
-                    <button
-                      type="button"
+                    <div
                       className="result-summary"
                       onClick={() => toggleExpanded(r.program_number)}
-                      aria-expanded={isExpanded}
                     >
-                      <div className="result-button-col">
+                      <div className="result-card-header">
                         <button
                           type="button"
                           className="play-button"
@@ -492,50 +767,54 @@ export default function App() {
                             <polygon points="5,3 19,12 5,21" />
                           </svg>
                         </button>
-                        <button
-                          type="button"
-                          className="result-info-button"
-                          title="Program details"
-                          aria-label={`${isDescriptionExpanded ? "Hide" : "Show"} description for ${r.title}`}
-                          aria-expanded={isDescriptionExpanded}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleProgramDescription(r.program_number);
-                          }}
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-                            <path d="M12 10.25V16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                            <circle cx="12" cy="7.5" r="1" fill="currentColor" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="result-playlist-button"
-                          title="Show playlist"
-                          aria-label={`${isExpanded ? "Hide" : "Show"} playlist for ${r.title}`}
-                          aria-expanded={isExpanded}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleExpanded(r.program_number);
-                          }}
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="result-content">
-                        <div className="result-title-row">
-                          <strong className="result-title">
-                            #{r.program_number} - {r.title}
-                          </strong>
-                          {r.program_date && (
-                            <span className="result-date">
-                              {new Date(r.program_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
-                            </span>
-                          )}
+
+                        <strong className="result-title">
+                          #{r.program_number} - {r.title}
+                        </strong>
+
+                        <div className="result-header-actions">
+                          <button
+                            type="button"
+                            className="result-info-button"
+                            title="Program details"
+                            aria-label={`${isDescriptionExpanded ? "Hide" : "Show"} description for ${r.title}`}
+                            aria-expanded={isDescriptionExpanded}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleProgramDescription(r.program_number);
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+                              <path d="M12 10.25V16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                              <circle cx="12" cy="7.5" r="1" fill="currentColor" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="result-playlist-button"
+                            title="Show playlist"
+                            aria-label={`${isExpanded ? "Hide" : "Show"} playlist for ${r.title}`}
+                            aria-expanded={isExpanded}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpanded(r.program_number);
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
+                          </button>
                         </div>
+
+                        {r.program_date && (
+                          <span className="result-date">
+                            {new Date(r.program_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="result-card-body">
                         <div className="result-description">{r.short_description}</div>
                         <button
                           type="button"
@@ -554,7 +833,92 @@ export default function App() {
                           <span>More like this</span>
                         </button>
                       </div>
-                    </button>
+
+                      <div className="mobile-result-layout">
+                        <div className="mobile-result-action-rail">
+                          <button
+                            type="button"
+                            className="play-button"
+                            title="Play on HOS"
+                            aria-label={`Play ${r.title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(
+                                `https://www.hos.com/programs/details/${r.program_number}?utm_campaign=shareaholic&utm_medium=copy_link&utm_source=bookmark`,
+                                "_blank",
+                                "noopener,noreferrer",
+                              );
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                              <polygon points="5,3 19,12 5,21" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="result-info-button"
+                            title="Program details"
+                            aria-label={`${isDescriptionExpanded ? "Hide" : "Show"} description for ${r.title}`}
+                            aria-expanded={isDescriptionExpanded}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleProgramDescription(r.program_number);
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+                              <path d="M12 10.25V16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                              <circle cx="12" cy="7.5" r="1" fill="currentColor" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="result-playlist-button"
+                            title="Show playlist"
+                            aria-label={`${isExpanded ? "Hide" : "Show"} playlist for ${r.title}`}
+                            aria-expanded={isExpanded}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpanded(r.program_number);
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        <div className="mobile-result-content">
+                          <div className="result-title-row">
+                            <strong className="result-title">
+                              #{r.program_number} - {r.title}
+                            </strong>
+                            {r.program_date && (
+                              <span className="result-date">
+                                {new Date(r.program_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                              </span>
+                            )}
+                          </div>
+                          <div className="result-description">{r.short_description}</div>
+                          <button
+                            type="button"
+                            className="result-more-button"
+                            aria-label={`Find more programs like ${r.title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMoreLikeThis(r);
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <circle cx="10" cy="10" r="5.5" stroke="currentColor" strokeWidth="1.8" />
+                              <path d="M14 14L19 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                              <path d="M10 7.5v5M7.5 10h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                            <span>More like this</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
 
                     <div
                       className={`result-program-description${isDescriptionExpanded ? " is-open" : ""}`}
@@ -633,10 +997,76 @@ export default function App() {
                   </article>
                 );
               })}
-            </div>
+              </div>
+            </>
           )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {isMoodIdeasOpen && (
+        <div
+          className="mood-modal-backdrop"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              handleMoodIdeasClose();
+            }
+          }}
+        >
+          <section
+            className="mood-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mood-modal-title"
+          >
+            <div className="mood-modal-header">
+              <h2 id="mood-modal-title">Mood Ideas</h2>
+              <button
+                type="button"
+                className="mood-modal-close"
+                onClick={handleMoodIdeasClose}
+                aria-label="Close mood ideas"
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M7 7l10 10M17 7L7 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+
+            {isPresetMoodsLoading && (
+              <div className="mood-modal-status" role="status">
+                Loading mood ideas...
+              </div>
+            )}
+
+            {!isPresetMoodsLoading && presetMoodsMessage && (
+              <div className="mood-modal-status" role="status">
+                {presetMoodsMessage}
+              </div>
+            )}
+
+            {!isPresetMoodsLoading && presetMoods.length > 0 && (
+              <div className="mood-list">
+                {presetMoods.map((mood) => (
+                  <button
+                    key={mood.slug}
+                    type="button"
+                    className="mood-card"
+                    onClick={() => handlePresetMoodSelect(mood)}
+                    disabled={isLoading}
+                  >
+                    <span className="mood-card-title">{mood.name}</span>
+                    {mood.description && (
+                      <span className="mood-card-description">{mood.description}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+    </>
   );
 }
