@@ -96,6 +96,11 @@ export default function App() {
       ? savedState.selectedPresetMood
       : null,
   );
+  const [presetMoodProgramPool, setPresetMoodProgramPool] = useState(
+    Array.isArray(savedState.presetMoodProgramPool)
+      ? savedState.presetMoodProgramPool
+      : [],
+  );
 
   useEffect(() => {
     const handleLocationChange = () => {
@@ -196,6 +201,7 @@ export default function App() {
       nextDescription.trim() !== selectedPresetMood.embedding_text.trim()
     ) {
       setSelectedPresetMood(null);
+      setPresetMoodProgramPool([]);
     }
   };
 
@@ -238,14 +244,24 @@ export default function App() {
     setExpandedTrackKey(null);
 
     try {
-      const data = trimmedProgramNumber
-        ? await fetchProgramByNumber(trimmedProgramNumber)
-        : useSelectedPresetMood
-          ? await fetchPresetMoodPrograms(selectedPresetMood.slug)
-          : await fetchSearchResults(payload);
-      const nextResults = Array.isArray(data) ? data : [];
+      let nextResults = [];
+      let nextPresetMoodProgramPool = [];
+
+      if (trimmedProgramNumber) {
+        nextResults = await fetchProgramByNumber(trimmedProgramNumber);
+      } else if (useSelectedPresetMood) {
+        nextPresetMoodProgramPool = presetMoodProgramPool.length > 0
+          ? presetMoodProgramPool
+          : await fetchPresetMoodPrograms(selectedPresetMood.slug);
+        nextResults = samplePresetMoodPrograms(nextPresetMoodProgramPool);
+      } else {
+        nextResults = await fetchSearchResults(payload);
+      }
+
+      nextResults = Array.isArray(nextResults) ? nextResults : [];
 
       setSelectedPresetMood(useSelectedPresetMood ? selectedPresetMood : null);
+      setPresetMoodProgramPool(useSelectedPresetMood ? nextPresetMoodProgramPool : []);
       setResults(nextResults);
       setIsSearchPanelOpen(nextResults.length === 0);
       setNoResultsMessage(nextResults.length === 0 ? "No matching results found." : "");
@@ -260,6 +276,7 @@ export default function App() {
           description,
           results: nextResults,
           selectedPresetMood: useSelectedPresetMood ? selectedPresetMood : null,
+          presetMoodProgramPool: useSelectedPresetMood ? nextPresetMoodProgramPool : [],
         }),
       );
     } finally {
@@ -315,7 +332,7 @@ export default function App() {
     }
 
     const data = await res.json();
-    return Array.isArray(data?.programs) ? samplePresetMoodPrograms(data.programs) : [];
+    return Array.isArray(data?.programs) ? data.programs : [];
   };
 
   const loadPresetMoods = async () => {
@@ -376,9 +393,10 @@ export default function App() {
     setExpandedTrackKey(null);
 
     try {
-      const data = await fetchPresetMoodPrograms(mood.slug);
-      const nextResults = Array.isArray(data) ? data : [];
+      const nextPresetMoodProgramPool = await fetchPresetMoodPrograms(mood.slug);
+      const nextResults = samplePresetMoodPrograms(nextPresetMoodProgramPool);
 
+      setPresetMoodProgramPool(nextPresetMoodProgramPool);
       setResults(nextResults);
       setIsSearchPanelOpen(nextResults.length === 0);
       setNoResultsMessage(nextResults.length === 0 ? "No matching results found." : "");
@@ -393,6 +411,7 @@ export default function App() {
           description: mood.embedding_text,
           results: nextResults,
           selectedPresetMood: mood,
+          presetMoodProgramPool: nextPresetMoodProgramPool,
         }),
       );
     } catch {
@@ -401,6 +420,38 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePresetMoodRefresh = () => {
+    if (!selectedPresetMood || isLoading || presetMoodProgramPool.length === 0) {
+      return;
+    }
+
+    setNoResultsMessage("");
+    setSourceProgram(null);
+    setExpandedProgram(null);
+    setExpandedDescriptionProgram(null);
+    setExpandedTrackKey(null);
+
+    const nextResults = samplePresetMoodPrograms(presetMoodProgramPool);
+
+    setResults(nextResults);
+    setIsSearchPanelOpen(nextResults.length === 0);
+    setNoResultsMessage(nextResults.length === 0 ? "No matching results found." : "");
+    sessionStorage.setItem(
+      SEARCH_STATE_KEY,
+      JSON.stringify({
+        query: selectedPresetMood.embedding_text,
+        programNumber,
+        programName,
+        genre,
+        programDescription,
+        description: selectedPresetMood.embedding_text,
+        results: nextResults,
+        selectedPresetMood,
+        presetMoodProgramPool,
+      }),
+    );
   };
 
   const toggleExpanded = (programNumber) => {
@@ -424,6 +475,7 @@ export default function App() {
     setNoResultsMessage("");
     setResults([]);
     setSelectedPresetMood(null);
+    setPresetMoodProgramPool([]);
     setExpandedProgram(null);
     setExpandedDescriptionProgram(null);
     setExpandedTrackKey(null);
@@ -458,6 +510,7 @@ export default function App() {
           results: nextResults,
           sourceProgram: src,
           selectedPresetMood: null,
+          presetMoodProgramPool: [],
         }),
       );
     } catch {
@@ -481,6 +534,7 @@ export default function App() {
     setProgramDescription("");
     setDescription("");
     setSelectedPresetMood(null);
+    setPresetMoodProgramPool([]);
     setNoResultsMessage("");
 
     sessionStorage.setItem(
@@ -494,6 +548,7 @@ export default function App() {
         description: "",
         results,
         selectedPresetMood: null,
+        presetMoodProgramPool: [],
       }),
     );
   };
@@ -506,6 +561,7 @@ export default function App() {
     setDescription("");
     setResults([]);
     setSelectedPresetMood(null);
+    setPresetMoodProgramPool([]);
     setNoResultsMessage("");
     setIsSearchPanelOpen(true);
     setSourceProgram(null);
@@ -526,6 +582,7 @@ export default function App() {
         description: "",
         results: [],
         selectedPresetMood: null,
+        presetMoodProgramPool: [],
       }),
     );
   };
@@ -539,6 +596,7 @@ export default function App() {
       setProgramDescription("");
       setDescription("");
       setSelectedPresetMood(null);
+      setPresetMoodProgramPool([]);
       setSourceProgram(null);
       setResults([]);
       setNoResultsMessage("");
@@ -726,10 +784,25 @@ export default function App() {
             <>
               {selectedPresetMood && (
                 <div className="preset-results-heading">
-                  <h2>{selectedPresetMood.name}</h2>
-                  {selectedPresetMood.description && (
-                    <p>{selectedPresetMood.description}</p>
-                  )}
+                  <div className="preset-results-heading-copy">
+                    <h2>{selectedPresetMood.name}</h2>
+                    {selectedPresetMood.description && (
+                      <p>{selectedPresetMood.description}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="preset-results-refresh-button"
+                    onClick={handlePresetMoodRefresh}
+                    disabled={isLoading || presetMoodProgramPool.length === 0}
+                    aria-label={`Shuffle programs for ${selectedPresetMood.name}`}
+                    title="Shuffle programs"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M16 3h5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M20.5 10A8.5 8.5 0 1 1 18 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </button>
                 </div>
               )}
 
