@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const SEARCH_STATE_KEY = "hosSearchState";
@@ -10,6 +10,8 @@ const PRESET_MOOD_LIMIT = 100;
 const PRESET_MOOD_TOP_POOL_SIZE = 20;
 const PRESET_MOOD_TOP_SAMPLE_SIZE = 5;
 const PRESET_MOOD_REST_SAMPLE_SIZE = 5;
+const MOOD_PLACEHOLDER =
+  "Describe the atmosphere you're looking for...\n\nquiet piano music at night\n\ndeep space ambient\n\nsacred choral music\n\nwarm and uplifting";
 
 const loadSavedSearchState = () => {
   const savedState = window.sessionStorage.getItem(SEARCH_STATE_KEY);
@@ -51,6 +53,7 @@ const samplePresetMoodPrograms = (programs) => [
 ];
 
 export default function App() {
+  const moodInputRef = useRef(null);
   const [savedState] = useState(loadSavedSearchState);
   const initialResults = Array.isArray(savedState.results) ? savedState.results : [];
   const initialDescription =
@@ -59,13 +62,16 @@ export default function App() {
       : typeof savedState.query === "string"
         ? savedState.query
         : "";
+  const initialProgramQuery =
+    typeof savedState.programQuery === "string"
+      ? savedState.programQuery
+      : typeof savedState.programNumber === "string" && savedState.programNumber
+        ? savedState.programNumber
+        : typeof savedState.programName === "string"
+          ? savedState.programName
+          : "";
 
-  const [programNumber, setProgramNumber] = useState(
-    typeof savedState.programNumber === "string" ? savedState.programNumber : "",
-  );
-  const [programName, setProgramName] = useState(
-    typeof savedState.programName === "string" ? savedState.programName : "",
-  );
+  const [programQuery, setProgramQuery] = useState(initialProgramQuery);
   const [genre, setGenre] = useState(
     typeof savedState.genre === "string" ? savedState.genre : "",
   );
@@ -169,6 +175,14 @@ export default function App() {
     };
   }, [isMoodIdeasOpen]);
 
+  useEffect(() => {
+    if (!isSearchPanelOpen) {
+      return;
+    }
+
+    moodInputRef.current?.focus();
+  }, [isSearchPanelOpen]);
+
   const isAdvancedSearch = searchMode === "advanced";
 
   const isGenreAllowed = (value) => {
@@ -204,16 +218,17 @@ export default function App() {
 
   const handleSearch = async () => {
     const payload = {};
-    const trimmedProgramNumber = programNumber.trim();
+    const trimmedProgramQuery = programQuery.trim();
+    const isProgramNumberSearch = /^\d+$/.test(trimmedProgramQuery);
     const trimmedGenre = genre.trim();
     const useSelectedPresetMood =
       selectedPresetMood &&
-      !trimmedProgramNumber &&
+      !trimmedProgramQuery &&
       !description.trim() &&
       presetMoodProgramPool.length > 0;
 
-    if (programName.trim()) {
-      payload.program_name = programName.trim();
+    if (trimmedProgramQuery && !isProgramNumberSearch) {
+      payload.program_name = trimmedProgramQuery;
     }
 
     if (isAdvancedSearch && trimmedGenre && !isGenreAllowed(trimmedGenre)) {
@@ -245,8 +260,8 @@ export default function App() {
       let nextResults = [];
       let nextPresetMoodProgramPool = [];
 
-      if (trimmedProgramNumber) {
-        nextResults = await fetchProgramByNumber(trimmedProgramNumber);
+      if (isProgramNumberSearch) {
+        nextResults = await fetchProgramByNumber(trimmedProgramQuery);
       } else if (useSelectedPresetMood) {
         nextPresetMoodProgramPool = presetMoodProgramPool.length > 0
           ? presetMoodProgramPool
@@ -267,8 +282,7 @@ export default function App() {
         SEARCH_STATE_KEY,
         JSON.stringify({
           query: description,
-          programNumber,
-          programName,
+          programQuery,
           genre,
           programDescription,
           description,
@@ -402,8 +416,7 @@ export default function App() {
         SEARCH_STATE_KEY,
         JSON.stringify({
           query: "",
-          programNumber,
-          programName,
+          programQuery,
           genre,
           programDescription,
           description: "",
@@ -440,8 +453,7 @@ export default function App() {
       SEARCH_STATE_KEY,
       JSON.stringify({
         query: "",
-        programNumber,
-        programName,
+        programQuery,
         genre,
         programDescription,
         description: "",
@@ -500,8 +512,7 @@ export default function App() {
         SEARCH_STATE_KEY,
         JSON.stringify({
           query: "",
-          programNumber: "",
-          programName: "",
+          programQuery: "",
           genre: "",
           programDescription: "",
           description: "",
@@ -526,8 +537,7 @@ export default function App() {
   };
 
   const handleResetFields = () => {
-    setProgramNumber("");
-    setProgramName("");
+    setProgramQuery("");
     setGenre("");
     setProgramDescription("");
     setDescription("");
@@ -539,8 +549,7 @@ export default function App() {
       SEARCH_STATE_KEY,
       JSON.stringify({
         query: "",
-        programNumber: "",
-        programName: "",
+        programQuery: "",
         genre: "",
         programDescription: "",
         description: "",
@@ -552,8 +561,7 @@ export default function App() {
   };
 
   const handleTitleClick = () => {
-    setProgramNumber("");
-    setProgramName("");
+    setProgramQuery("");
     setGenre("");
     setProgramDescription("");
     setDescription("");
@@ -573,8 +581,7 @@ export default function App() {
       SEARCH_STATE_KEY,
       JSON.stringify({
         query: "",
-        programNumber: "",
-        programName: "",
+        programQuery: "",
         genre: "",
         programDescription: "",
         description: "",
@@ -588,8 +595,7 @@ export default function App() {
   const handleSearchToggleClick = () => {
     if (!isSearchPanelOpen) {
       // Opening the panel: reset fields and clear any MLT context
-      setProgramNumber("");
-      setProgramName("");
+      setProgramQuery("");
       setGenre("");
       setProgramDescription("");
       setDescription("");
@@ -678,21 +684,37 @@ export default function App() {
                   Search by Program Number or Program Name, or describe a mood.
                 </p>
 
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="Program Number"
-                  value={programNumber}
-                  onChange={(e) => setProgramNumber(e.target.value)}
-                  className="search-text-input"
+                <textarea
+                  ref={moodInputRef}
+                  rows={2}
+                  placeholder={MOOD_PLACEHOLDER}
+                  value={description}
+                  onChange={handleDescriptionChange}
+                  onKeyDown={handleDescriptionKeyDown}
+                  className="search-input"
                 />
+
+                <div className="mood-ideas-link-wrap">
+                  <button
+                    type="button"
+                    className="mood-ideas-link"
+                    onClick={handleMoodIdeasClick}
+                    disabled={isLoading}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 3l1.5 5.2L19 10l-5.5 1.8L12 17l-1.5-5.2L5 10l5.5-1.8L12 3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                      <path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                    </svg>
+                    Mood Ideas
+                  </button>
+                </div>
 
                 <input
                   type="text"
-                  placeholder="Program Name"
-                  value={programName}
-                  onChange={(e) => setProgramName(e.target.value)}
-                  className="search-text-input"
+                  placeholder="Program Number or Name"
+                  value={programQuery}
+                  onChange={(e) => setProgramQuery(e.target.value)}
+                  className="search-text-input search-text-input-full"
                 />
 
                 {isAdvancedSearch && (
@@ -725,30 +747,6 @@ export default function App() {
                     />
                   </>
                 )}
-
-                <textarea
-                  rows={2}
-                  placeholder="Mood"
-                  value={description}
-                  onChange={handleDescriptionChange}
-                  onKeyDown={handleDescriptionKeyDown}
-                  className="search-input"
-                />
-
-                <div className="mood-ideas-link-wrap">
-                  <button
-                    type="button"
-                    className="mood-ideas-link"
-                    onClick={handleMoodIdeasClick}
-                    disabled={isLoading}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M12 3l1.5 5.2L19 10l-5.5 1.8L12 17l-1.5-5.2L5 10l5.5-1.8L12 3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                      <path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-                    </svg>
-                    Mood Ideas
-                  </button>
-                </div>
 
                 <div className="search-panel-actions">
                   <button
