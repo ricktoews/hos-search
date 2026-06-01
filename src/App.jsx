@@ -196,10 +196,7 @@ export default function App() {
     const nextDescription = e.target.value;
     setDescription(nextDescription);
 
-    if (
-      selectedPresetMood &&
-      nextDescription.trim() !== selectedPresetMood.embedding_text.trim()
-    ) {
+    if (selectedPresetMood && nextDescription.trim()) {
       setSelectedPresetMood(null);
       setPresetMoodProgramPool([]);
     }
@@ -212,7 +209,8 @@ export default function App() {
     const useSelectedPresetMood =
       selectedPresetMood &&
       !trimmedProgramNumber &&
-      description.trim() === selectedPresetMood.embedding_text.trim();
+      !description.trim() &&
+      presetMoodProgramPool.length > 0;
 
     if (programName.trim()) {
       payload.program_name = programName.trim();
@@ -381,7 +379,7 @@ export default function App() {
   };
 
   const handlePresetMoodSelect = async (mood) => {
-    setDescription(mood.embedding_text);
+    setDescription("");
     setSelectedPresetMood(mood);
     setNoResultsMessage("");
     setIsMoodIdeasOpen(false);
@@ -403,12 +401,12 @@ export default function App() {
       sessionStorage.setItem(
         SEARCH_STATE_KEY,
         JSON.stringify({
-          query: mood.embedding_text,
+          query: "",
           programNumber,
           programName,
           genre,
           programDescription,
-          description: mood.embedding_text,
+          description: "",
           results: nextResults,
           selectedPresetMood: mood,
           presetMoodProgramPool: nextPresetMoodProgramPool,
@@ -441,12 +439,12 @@ export default function App() {
     sessionStorage.setItem(
       SEARCH_STATE_KEY,
       JSON.stringify({
-        query: selectedPresetMood.embedding_text,
+        query: "",
         programNumber,
         programName,
         genre,
         programDescription,
-        description: selectedPresetMood.embedding_text,
+        description: "",
         results: nextResults,
         selectedPresetMood,
         presetMoodProgramPool,
@@ -617,21 +615,29 @@ export default function App() {
           ].filter(Boolean).join(" ")}
         >
         <header className="page-header">
-          <div className="header-logo-wrap">
+          <button
+            type="button"
+            className="header-logo-wrap"
+            onClick={handleSearchToggleClick}
+            aria-label={isSearchPanelOpen ? "Close search form" : "Open search form"}
+          >
             <img
               className="header-logo"
               src="/images/hos_emblem.svg"
               alt="Hearts of Space logo"
             />
-          </div>
-          <button
-            type="button"
-            onClick={handleTitleClick}
-            className="page-title"
-            aria-label="Clear search and return to original state"
-          >
-            Archive Search
           </button>
+          <div className="header-title-wrap">
+            <div className="header-title-kicker">Music From The Hearts Of Space</div>
+            <button
+              type="button"
+              onClick={handleTitleClick}
+              className="page-title"
+              aria-label="Clear search and return to original state"
+            >
+              Archive Search
+            </button>
+          </div>
           <button
             type="button"
             className="header-search-icon"
@@ -668,6 +674,10 @@ export default function App() {
               ].filter(Boolean).join(" ")}
             >
               <form className="search-fields" onSubmit={handleSearchSubmit}>
+                <p className="search-fields-instruction">
+                  Search by Program Number or Program Name, or describe a mood.
+                </p>
+
                 <input
                   type="text"
                   inputMode="numeric"
@@ -716,6 +726,15 @@ export default function App() {
                   </>
                 )}
 
+                <textarea
+                  rows={2}
+                  placeholder="Mood"
+                  value={description}
+                  onChange={handleDescriptionChange}
+                  onKeyDown={handleDescriptionKeyDown}
+                  className="search-input"
+                />
+
                 <div className="mood-ideas-link-wrap">
                   <button
                     type="button"
@@ -730,15 +749,6 @@ export default function App() {
                     Mood Ideas
                   </button>
                 </div>
-
-                <textarea
-                  rows={2}
-                  placeholder="Mood"
-                  value={description}
-                  onChange={handleDescriptionChange}
-                  onKeyDown={handleDescriptionKeyDown}
-                  className="search-input"
-                />
 
                 <div className="search-panel-actions">
                   <button
