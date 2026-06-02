@@ -60,6 +60,24 @@ const capitalizeFirstLetter = (value) => {
   return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
 };
 
+const formatProgramDate = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) {
+    return value;
+  }
+
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+};
+
 const copyTextToClipboard = async (text) => {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);
@@ -201,14 +219,16 @@ export default function App() {
   }, [isMoodIdeasOpen]);
 
   useEffect(() => {
-    if (!isSearchPanelOpen) {
+    if (!isSearchPanelOpen || programQuery.trim()) {
       return;
     }
 
     moodInputRef.current?.focus();
-  }, [isSearchPanelOpen]);
+  }, [isSearchPanelOpen, programQuery]);
 
   const isAdvancedSearch = searchMode === "advanced";
+  const hasProgramQuery = programQuery.trim().length > 0;
+  const hasMoodQuery = description.trim().length > 0;
 
   const isGenreAllowed = (value) => {
     const normalized = value.trim().toLowerCase();
@@ -236,6 +256,16 @@ export default function App() {
     setDescription(nextDescription);
 
     if (selectedPresetMood && nextDescription.trim()) {
+      setSelectedPresetMood(null);
+      setPresetMoodProgramPool([]);
+    }
+  };
+
+  const handleProgramQueryChange = (e) => {
+    const nextProgramQuery = e.target.value;
+    setProgramQuery(nextProgramQuery);
+
+    if (nextProgramQuery.trim()) {
       setSelectedPresetMood(null);
       setPresetMoodProgramPool([]);
     }
@@ -602,7 +632,7 @@ export default function App() {
     );
   };
 
-  const handleTitleClick = () => {
+  const handleShowCleanSearch = () => {
     setProgramQuery("");
     setGenre("");
     setProgramDescription("");
@@ -634,25 +664,6 @@ export default function App() {
     );
   };
 
-  const handleSearchToggleClick = () => {
-    if (!isSearchPanelOpen) {
-      // Opening the panel: reset fields and clear any MLT context
-      setProgramQuery("");
-      setGenre("");
-      setProgramDescription("");
-      setDescription("");
-      setSelectedPresetMood(null);
-      setPresetMoodProgramPool([]);
-      setSourceProgram(null);
-      setResults([]);
-      setNoResultsMessage("");
-      setExpandedProgram(null);
-      setExpandedDescriptionProgram(null);
-      setExpandedTrackKey(null);
-    }
-    setIsSearchPanelOpen((value) => !value);
-  };
-
   return (
     <>
       <div className="app-shell">
@@ -666,8 +677,8 @@ export default function App() {
           <button
             type="button"
             className="header-logo-wrap"
-            onClick={handleSearchToggleClick}
-            aria-label={isSearchPanelOpen ? "Close search form" : "Open search form"}
+            onClick={handleShowCleanSearch}
+            aria-label="Open a clean search form"
           >
             <img
               className="header-logo"
@@ -679,7 +690,7 @@ export default function App() {
             <div className="header-title-kicker">Music From The Hearts Of Space</div>
             <button
               type="button"
-              onClick={handleTitleClick}
+              onClick={handleShowCleanSearch}
               className="page-title"
               aria-label="Clear search and return to original state"
             >
@@ -689,8 +700,8 @@ export default function App() {
           <button
             type="button"
             className="header-search-icon"
-            onClick={handleSearchToggleClick}
-            aria-label={isSearchPanelOpen ? "Close search form" : "Open search form"}
+            onClick={handleShowCleanSearch}
+            aria-label="Open a clean search form"
           >
             <svg viewBox="0 0 24 24" fill="none">
               <circle cx="10" cy="10" r="5.5" stroke="currentColor" strokeWidth="1.8" />
@@ -723,41 +734,48 @@ export default function App() {
             >
               <form className="search-fields" onSubmit={handleSearchSubmit}>
                 <p className="search-fields-instruction">
-                  Search by Program Number or Program Name, or describe a mood.
+                  Search the Music From The Hearts Of Space archives by describing a mood
+                  or atmosphere. Alternatively, search by Program Number or Program Name.
                 </p>
 
-                <textarea
-                  ref={moodInputRef}
-                  rows={2}
-                  placeholder={MOOD_PLACEHOLDER}
-                  value={description}
-                  onChange={handleDescriptionChange}
-                  onKeyDown={handleDescriptionKeyDown}
-                  className="search-input"
-                />
+                {!hasProgramQuery && (
+                  <>
+                    <textarea
+                      ref={moodInputRef}
+                      rows={2}
+                      placeholder={MOOD_PLACEHOLDER}
+                      value={description}
+                      onChange={handleDescriptionChange}
+                      onKeyDown={handleDescriptionKeyDown}
+                      className="search-input"
+                    />
 
-                <div className="mood-ideas-link-wrap">
-                  <button
-                    type="button"
-                    className="mood-ideas-link"
-                    onClick={handleMoodIdeasClick}
-                    disabled={isLoading}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M12 3l1.5 5.2L19 10l-5.5 1.8L12 17l-1.5-5.2L5 10l5.5-1.8L12 3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                      <path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-                    </svg>
-                    Atmosphere Ideas
-                  </button>
-                </div>
+                    <div className="mood-ideas-link-wrap">
+                      <button
+                        type="button"
+                        className="mood-ideas-link"
+                        onClick={handleMoodIdeasClick}
+                        disabled={isLoading}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M12 3l1.5 5.2L19 10l-5.5 1.8L12 17l-1.5-5.2L5 10l5.5-1.8L12 3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                          <path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                        </svg>
+                        Atmosphere Ideas
+                      </button>
+                    </div>
+                  </>
+                )}
 
-                <input
-                  type="text"
-                  placeholder="Program Number or Name"
-                  value={programQuery}
-                  onChange={(e) => setProgramQuery(e.target.value)}
-                  className="search-text-input search-text-input-full"
-                />
+                {!hasMoodQuery && (
+                  <input
+                    type="text"
+                    placeholder="Program Number or Name"
+                    value={programQuery}
+                    onChange={handleProgramQueryChange}
+                    className="search-text-input search-text-input-full"
+                  />
+                )}
 
                 {isAdvancedSearch && (
                   <>
@@ -932,7 +950,7 @@ export default function App() {
 
                         {r.program_date && (
                           <span className="result-date">
-                            {new Date(r.program_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                            {formatProgramDate(r.program_date)}
                           </span>
                         )}
                       </div>
@@ -1020,7 +1038,7 @@ export default function App() {
                             </strong>
                             {r.program_date && (
                               <span className="result-date">
-                                {new Date(r.program_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                                {formatProgramDate(r.program_date)}
                               </span>
                             )}
                           </div>
