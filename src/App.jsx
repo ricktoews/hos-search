@@ -95,6 +95,14 @@ const copyTextToClipboard = async (text) => {
   document.body.removeChild(textArea);
 };
 
+const openProgramOnHos = (programNumber) => {
+  window.open(
+    `https://www.hos.com/programs/details/${programNumber}?utm_campaign=shareaholic&utm_medium=copy_link&utm_source=bookmark`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+};
+
 export default function App() {
   const moodInputRef = useRef(null);
   const [savedState] = useState(loadSavedSearchState);
@@ -140,6 +148,7 @@ export default function App() {
   const [isMoodIdeasOpen, setIsMoodIdeasOpen] = useState(false);
   const [isPresetMoodsLoading, setIsPresetMoodsLoading] = useState(false);
   const [presetMoodsMessage, setPresetMoodsMessage] = useState("");
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [selectedPresetMood, setSelectedPresetMood] = useState(
     savedState.selectedPresetMood && typeof savedState.selectedPresetMood === "object"
       ? savedState.selectedPresetMood
@@ -536,6 +545,32 @@ export default function App() {
     );
   };
 
+  const handleHelpOpen = () => {
+    setIsHelpOpen(true);
+    setIsSearchPanelOpen(false);
+  };
+
+  const handleHelpClose = () => {
+    setIsHelpOpen(false);
+    setIsSearchPanelOpen(true);
+    window.requestAnimationFrame(() => {
+      moodInputRef.current?.focus();
+    });
+  };
+
+  const handleExampleSearch = (example) => {
+    setProgramQuery("");
+    setDescription(example);
+    setSelectedPresetMood(null);
+    setPresetMoodProgramPool([]);
+    setNoResultsMessage("");
+    setIsHelpOpen(false);
+    setIsSearchPanelOpen(true);
+    window.requestAnimationFrame(() => {
+      moodInputRef.current?.focus();
+    });
+  };
+
   const toggleExpanded = (programNumber) => {
     setExpandedProgram((current) =>
       current === programNumber ? null : programNumber,
@@ -646,6 +681,7 @@ export default function App() {
     setExpandedProgram(null);
     setExpandedDescriptionProgram(null);
     setExpandedTrackKey(null);
+    setIsHelpOpen(false);
     setSearchMode("basic");
     window.history.replaceState(null, "", window.location.pathname);
 
@@ -677,8 +713,8 @@ export default function App() {
           <button
             type="button"
             className="header-logo-wrap"
-            onClick={handleShowCleanSearch}
-            aria-label="Open a clean search form"
+            onClick={handleHelpOpen}
+            aria-label="Open About and Help"
           >
             <img
               className="header-logo"
@@ -710,7 +746,7 @@ export default function App() {
           </button>
         </header>
 
-        {sourceProgram && (
+        {!isHelpOpen && sourceProgram && (
           <div className="similar-context-bar">
             <span className="similar-context-label">Similar to</span>
             <span className="similar-context-title">
@@ -722,6 +758,7 @@ export default function App() {
           </div>
         )}
 
+        {!isHelpOpen && (
         <div className="search-body search-body-top">
           <div className="search-sticky">
             <div
@@ -830,11 +867,140 @@ export default function App() {
               </form>
             </div>
           </div>
-          </div>
+        </div>
+        )}
         </div>
 
         <div className="search-body search-results-shell">
           <div className="search-results">
+            {isHelpOpen && (
+              <section className="help-page" aria-labelledby="help-title">
+                <div className="help-page-header">
+                  <div>
+                    <p className="help-kicker">About this search</p>
+                    <h1 id="help-title">What is this?</h1>
+                  </div>
+                  <button
+                    type="button"
+                    className="help-close-button"
+                    onClick={handleHelpClose}
+                  >
+                    Start Searching
+                  </button>
+                </div>
+
+                <p className="help-intro">
+                  This unofficial fan project helps Hearts of Space listeners discover
+                  programs by atmosphere.
+                </p>
+
+                <div className="help-section">
+                  <h2>How to search</h2>
+                  <p>
+                    Describe the atmosphere you're looking for, or choose from
+                    Atmosphere Ideas. You can also search directly by program number
+                    or title.
+                  </p>
+                </div>
+
+                <div className="help-section">
+                  <h2>Explore</h2>
+                  <div className="help-card-demo" aria-label="Annotated sample program card">
+                    <div className="help-sample-card">
+                      <div className="help-sample-card-header">
+                        <div className="help-sample-play">
+                          <span className="help-marker">1</span>
+                          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <polygon points="5,3 19,12 5,21" />
+                          </svg>
+                        </div>
+                        <div className="help-sample-title-wrap">
+                          <strong className="help-sample-title">
+                            #1345 - Night Drift
+                          </strong>
+                          <span className="help-sample-date">Sample program card</span>
+                        </div>
+                        <div className="help-sample-actions">
+                          <div className="help-sample-icon">
+                            <span className="help-marker">2</span>
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+                              <path d="M12 10.25V16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                              <circle cx="12" cy="7.5" r="1" fill="currentColor" />
+                            </svg>
+                          </div>
+                          <div className="help-sample-icon">
+                            <span className="help-marker">3</span>
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="help-sample-card-body">
+                        <p>
+                          A quiet, late-night journey through spacious ambient textures
+                          and slow melodic passages.
+                        </p>
+                        <div className="help-sample-more">
+                          <span className="help-marker">4</span>
+                          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle cx="10" cy="10" r="5.5" stroke="currentColor" strokeWidth="1.8" />
+                            <path d="M14 14L19 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            <path d="M10 7.5v5M7.5 10h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                          </svg>
+                          <span>More like this</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="help-annotation-list">
+                      <div className="help-annotation">
+                        <span className="help-annotation-number">1</span>
+                        <span>Open the program on the Hearts of Space website</span>
+                      </div>
+                      <div className="help-annotation">
+                        <span className="help-annotation-number">2</span>
+                        <span>View program details</span>
+                      </div>
+                      <div className="help-annotation">
+                        <span className="help-annotation-number">3</span>
+                        <span>View the playlist</span>
+                      </div>
+                      <div className="help-annotation">
+                        <span className="help-annotation-number">4</span>
+                        <span>Find similar programs</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="help-section">
+                  <h2>Examples</h2>
+                  <div className="help-example-grid">
+                    {[
+                      "deep space ambient",
+                      "sacred choral music",
+                      "warm and uplifting",
+                      "melancholy autumn music",
+                      "quiet piano at night",
+                    ].map((example) => (
+                      <button
+                        key={example}
+                        type="button"
+                        className="help-example-button"
+                        onClick={() => handleExampleSearch(example)}
+                      >
+                        {example}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {!isHelpOpen && (
+              <>
             {isLoading && (
               <div className="search-loading" role="status" aria-live="polite">
                 <span className="search-spinner" aria-hidden="true" />
@@ -897,11 +1063,7 @@ export default function App() {
                           aria-label={`Play ${r.title}`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(
-                              `https://www.hos.com/programs/details/${r.program_number}?utm_campaign=shareaholic&utm_medium=copy_link&utm_source=bookmark`,
-                              "_blank",
-                              "noopener,noreferrer",
-                            );
+                            openProgramOnHos(r.program_number);
                           }}
                         >
                           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -909,9 +1071,16 @@ export default function App() {
                           </svg>
                         </button>
 
-                        <strong className="result-title">
+                        <button
+                          type="button"
+                          className="result-title result-title-button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openProgramOnHos(r.program_number);
+                          }}
+                        >
                           #{r.program_number} - {r.title}
-                        </strong>
+                        </button>
 
                         <div className="result-header-actions">
                           <button
@@ -986,11 +1155,7 @@ export default function App() {
                             aria-label={`Play ${r.title}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              window.open(
-                                `https://www.hos.com/programs/details/${r.program_number}?utm_campaign=shareaholic&utm_medium=copy_link&utm_source=bookmark`,
-                                "_blank",
-                                "noopener,noreferrer",
-                              );
+                              openProgramOnHos(r.program_number);
                             }}
                           >
                             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -1033,9 +1198,16 @@ export default function App() {
 
                         <div className="mobile-result-content">
                           <div className="result-title-row">
-                            <strong className="result-title">
+                            <button
+                              type="button"
+                              className="result-title result-title-button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openProgramOnHos(r.program_number);
+                              }}
+                            >
                               #{r.program_number} - {r.title}
-                            </strong>
+                            </button>
                             {r.program_date && (
                               <span className="result-date">
                                 {formatProgramDate(r.program_date)}
@@ -1145,6 +1317,8 @@ export default function App() {
               </div>
             </>
           )}
+              </>
+            )}
           </div>
         </div>
       </div>
