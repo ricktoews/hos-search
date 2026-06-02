@@ -550,14 +550,6 @@ export default function App() {
     setIsSearchPanelOpen(false);
   };
 
-  const handleHelpClose = () => {
-    setIsHelpOpen(false);
-    setIsSearchPanelOpen(true);
-    window.requestAnimationFrame(() => {
-      moodInputRef.current?.focus();
-    });
-  };
-
   const handleExampleSearch = (example) => {
     setProgramQuery("");
     setDescription(example);
@@ -735,7 +727,10 @@ export default function App() {
           </div>
           <button
             type="button"
-            className="header-search-icon"
+            className={[
+              "header-search-icon",
+              isHelpOpen ? "is-pulsing" : "",
+            ].filter(Boolean).join(" ")}
             onClick={handleShowCleanSearch}
             aria-label="Open a clean search form"
           >
@@ -877,16 +872,8 @@ export default function App() {
               <section className="help-page" aria-labelledby="help-title">
                 <div className="help-page-header">
                   <div>
-                    <p className="help-kicker">About this search</p>
                     <h1 id="help-title">What is this?</h1>
                   </div>
-                  <button
-                    type="button"
-                    className="help-close-button"
-                    onClick={handleHelpClose}
-                  >
-                    Start Searching
-                  </button>
                 </div>
 
                 <p className="help-intro">
