@@ -691,32 +691,47 @@
 }
 
 .mood-card {
+  position: relative;
   min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: var(--code-bg);
+  color: inherit;
+}
+
+.mood-card:hover {
+  border-color: var(--accent-border);
+}
+
+.mood-card-select {
+  min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.25rem;
-  padding: 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: 0.65rem;
-  background: var(--code-bg);
+  padding: 0.1rem 2.2rem 0.1rem 0.1rem;
+  border: 0;
+  background: transparent;
   color: inherit;
   text-align: left;
   font: inherit;
   cursor: pointer;
 }
 
-.mood-card:hover {
-  border-color: var(--accent-border);
-  background: var(--accent-bg);
+.mood-card-select:hover .mood-card-title {
+  color: var(--accent);
 }
 
-.mood-card:disabled {
+.mood-card-select:disabled,
+.mood-card-copy:disabled {
   opacity: 0.7;
   cursor: progress;
 }
 
-.mood-card:focus-visible {
+.mood-card-select:focus-visible,
+.mood-card-copy:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -731,6 +746,33 @@
   color: var(--accent);
   font-size: 0.82rem;
   line-height: 1.25;
+}
+
+.mood-card-copy {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--accent);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mood-card-copy svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.mood-card-copy:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
 }
 
 @media (min-width: 769px) {

@@ -11,7 +11,7 @@ const PRESET_MOOD_TOP_POOL_SIZE = 20;
 const PRESET_MOOD_TOP_SAMPLE_SIZE = 5;
 const PRESET_MOOD_REST_SAMPLE_SIZE = 5;
 const MOOD_PLACEHOLDER =
-  "Describe the atmosphere you're looking for...\n\nquiet piano music at night\n\ndeep space ambient\n\nsacred choral music\n\nwarm and uplifting";
+  "Describe the atmosphere you're looking for...";
 
 const loadSavedSearchState = () => {
   const savedState = window.sessionStorage.getItem(SEARCH_STATE_KEY);
@@ -51,6 +51,31 @@ const samplePresetMoodPrograms = (programs) => [
     PRESET_MOOD_REST_SAMPLE_SIZE,
   ),
 ];
+
+const capitalizeFirstLetter = (value) => {
+  if (typeof value !== "string" || value.length === 0) {
+    return value;
+  }
+
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+};
+
+const copyTextToClipboard = async (text) => {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "fixed";
+  textArea.style.top = "-9999px";
+  document.body.appendChild(textArea);
+  textArea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textArea);
+};
 
 export default function App() {
   const moodInputRef = useRef(null);
@@ -433,6 +458,23 @@ export default function App() {
     }
   };
 
+  const handlePresetMoodCopy = async (mood) => {
+    try {
+      await copyTextToClipboard(mood.embedding_text);
+    } catch {
+      // Keep the field population useful even if clipboard access is blocked.
+    }
+
+    setDescription(mood.embedding_text);
+    setSelectedPresetMood(null);
+    setPresetMoodProgramPool([]);
+    setNoResultsMessage("");
+    setIsMoodIdeasOpen(false);
+    window.requestAnimationFrame(() => {
+      moodInputRef.current?.focus();
+    });
+  };
+
   const handlePresetMoodRefresh = () => {
     if (!selectedPresetMood || isLoading || presetMoodProgramPool.length === 0) {
       return;
@@ -705,7 +747,7 @@ export default function App() {
                       <path d="M12 3l1.5 5.2L19 10l-5.5 1.8L12 17l-1.5-5.2L5 10l5.5-1.8L12 3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
                       <path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
                     </svg>
-                    Mood Ideas
+                    Atmosphere Ideas
                   </button>
                 </div>
 
@@ -896,7 +938,9 @@ export default function App() {
                       </div>
 
                       <div className="result-card-body">
-                        <div className="result-description">{r.short_description}</div>
+                        <div className="result-description">
+                          {capitalizeFirstLetter(r.short_description)}
+                        </div>
                         <button
                           type="button"
                           className="result-more-button"
@@ -980,7 +1024,9 @@ export default function App() {
                               </span>
                             )}
                           </div>
-                          <div className="result-description">{r.short_description}</div>
+                          <div className="result-description">
+                            {capitalizeFirstLetter(r.short_description)}
+                          </div>
                           <button
                             type="button"
                             className="result-more-button"
@@ -1102,7 +1148,7 @@ export default function App() {
             aria-labelledby="mood-modal-title"
           >
             <div className="mood-modal-header">
-              <h2 id="mood-modal-title">Mood Ideas</h2>
+              <h2 id="mood-modal-title">Atmosphere Ideas</h2>
               <button
                 type="button"
                 className="mood-modal-close"
@@ -1130,18 +1176,35 @@ export default function App() {
             {!isPresetMoodsLoading && presetMoods.length > 0 && (
               <div className="mood-list">
                 {presetMoods.map((mood) => (
-                  <button
+                  <div
                     key={mood.slug}
-                    type="button"
                     className="mood-card"
-                    onClick={() => handlePresetMoodSelect(mood)}
-                    disabled={isLoading}
                   >
-                    <span className="mood-card-title">{mood.name}</span>
-                    {mood.description && (
-                      <span className="mood-card-description">{mood.description}</span>
-                    )}
-                  </button>
+                    <button
+                      type="button"
+                      className="mood-card-select"
+                      onClick={() => handlePresetMoodSelect(mood)}
+                      disabled={isLoading}
+                    >
+                      <span className="mood-card-title">{mood.name}</span>
+                      {mood.description && (
+                        <span className="mood-card-description">{mood.description}</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="mood-card-copy"
+                      onClick={() => handlePresetMoodCopy(mood)}
+                      disabled={isLoading}
+                      aria-label={`Copy ${mood.name} mood text`}
+                      title="Copy mood text"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <rect x="8" y="8" width="10" height="12" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                        <path d="M6 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
